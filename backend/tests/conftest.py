@@ -4,7 +4,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
-from app.main import app
+
+# Import all agent modules to ensure they register in AGENT_REGISTRY
+import app.agents.planner       # noqa: F401
+import app.agents.finance       # noqa: F401
+import app.agents.technical     # noqa: F401
+import app.agents.news          # noqa: F401
+import app.agents.risk          # noqa: F401
+import app.agents.judge         # noqa: F401
+import app.agents.portfolio_agent  # noqa: F401
+import app.agents.report        # noqa: F401
+
+from app.main import app as fastapi_app
 
 TEST_DATABASE_URL = "sqlite:///./test.db"
 test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -19,7 +30,7 @@ def override_get_db():
         db.close()
 
 
-app.dependency_overrides[get_db] = override_get_db
+fastapi_app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest.fixture(autouse=True)
@@ -31,7 +42,7 @@ def setup_db():
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    return TestClient(fastapi_app)
 
 
 @pytest.fixture

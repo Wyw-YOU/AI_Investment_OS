@@ -93,7 +93,7 @@ def calculate_kdj(
     period: int = 9,
 ) -> Dict[str, float]:
     """KDJ indicator."""
-    if len(closes) < period:
+    if len(closes) < period or not highs or not lows:
         return {"k": 50.0, "d": 50.0, "j": 50.0, "signal": "neutral"}
 
     k_values = []
@@ -179,9 +179,9 @@ def calculate_all_indicators(
     lows: Optional[List[float]] = None,
 ) -> Dict:
     """Calculate all technical indicators at once."""
-    if highs is None:
+    if highs is None or not highs:
         highs = closes
-    if lows is None:
+    if lows is None or not lows:
         lows = closes
 
     return {

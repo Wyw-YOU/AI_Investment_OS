@@ -1,9 +1,17 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import List
 
+# .env is at project root (AI_Investment_OS/.env), not in backend/
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
+
 
 class Settings(BaseSettings):
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {
+        "env_file": str(_ENV_FILE),
+        "env_file_encoding": "utf-8",
+    }
 
     app_name: str = "AI Investment OS"
     debug: bool = False

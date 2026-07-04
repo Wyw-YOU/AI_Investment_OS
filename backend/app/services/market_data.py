@@ -10,6 +10,27 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 
+def _bypass_system_proxy_for_akshare():
+    """Disable system proxy for akshare HTTP requests.
+
+    Windows users with Clash/V2Ray have a system-wide proxy (from registry)
+    that intercepts connections to domestic financial data sites (eastmoney.com).
+    This patches requests.Session to bypass the proxy for these direct connections.
+    """
+    import requests
+
+    _original_init = requests.Session.__init__
+
+    def _patched_init(self, *args, **kwargs):
+        _original_init(self, *args, **kwargs)
+        self.trust_env = False
+
+    requests.Session.__init__ = _patched_init
+
+
+_bypass_system_proxy_for_akshare()
+
+
 class MarketDataService:
     def __init__(self, cache=None):
         self.cache = cache
