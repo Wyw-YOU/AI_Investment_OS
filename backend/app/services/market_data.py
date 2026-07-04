@@ -5,7 +5,7 @@ All data is cached via CacheService to reduce API calls.
 """
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class MarketDataService:
             df = ak.stock_zh_a_hist(
                 symbol=stock_code,
                 period=period,
-                start_date=(datetime.now().replace(day=1).strftime("%Y%m%d")),
+                start_date=(datetime.now() - timedelta(days=days)).strftime("%Y%m%d"),
                 adjust="qfq",
             )
             data = df.tail(days).to_dict(orient="records")
@@ -56,8 +56,27 @@ class MarketDataService:
             logger.error(f"Failed to fetch kline for {stock_code}: {e}")
             return []
 
+    def _fetch_all_spot(self) -> Optional["pandas.DataFrame"]:
+        """Fetch and cache full A-share spot data (shared by realtime_quote and hot_stocks)."""
+        cache_key = "market:spot_all:df"
+        if self.cache:
+            cached = self.cache.get(cache_key)
+            if cached:
+                import pandas as pd
+                return pd.DataFrame(cached)
+
+        try:
+            import akshare as ak
+            df = ak.stock_zh_a_spot_em()
+            if self.cache:
+                self.cache.set(cache_key, df.to_dict(orient="records"), ttl=30)
+            return df
+        except Exception as e:
+            logger.error(f"Failed to fetch all spot data: {e}")
+            return None
+
     def get_realtime_quote(self, stock_code: str) -> Dict:
-        """Get real-time stock quote."""
+        """Get real-time stock quote for a single stock (uses shared spot cache)."""
         cache_key = f"market:realtime:{stock_code}"
         if self.cache:
             cached = self.cache.get(cache_key)
@@ -65,8 +84,10 @@ class MarketDataService:
                 return cached
 
         try:
-            import akshare as ak
-            df = ak.stock_zh_a_spot_em()
+            df = self._fetch_all_spot()
+            if df is None or df.empty:
+                return {}
+
             row = df[df["代码"] == stock_code]
             if row.empty:
                 return {}
@@ -129,10 +150,12 @@ class MarketDataService:
             return {}
 
     def get_hot_stocks(self, limit: int = 20) -> List[Dict]:
-        """Get hot stocks by trading volume."""
+        """Get hot stocks by trading volume (uses shared spot cache)."""
         try:
-            import akshare as ak
-            df = ak.stock_zh_a_spot_em()
+            df = self._fetch_all_spot()
+            if df is None or df.empty:
+                return []
+
             df = df.nlargest(limit, "成交额")
             result = []
             for _, row in df.iterrows():

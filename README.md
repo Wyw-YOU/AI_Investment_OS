@@ -112,7 +112,7 @@ AI Investment OS 是一个基于 LangGraph 多 Agent 架构的金融操作系统
 | 后端 | Python, FastAPI, LangGraph |
 | 数据库 | SQLite, Redis, FAISS |
 | AI/LLM | LangChain, LangGraph Multi-Agent |
-| 部署 | Docker Compose |
+| 部署 | Docker Compose V2 |
 
 ## 快速开始
 
@@ -143,7 +143,7 @@ npm run dev
 ### Docker 部署
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 单台 2C4G 服务器即可运行 MVP。
@@ -161,7 +161,7 @@ AI_Investment_OS/
 │   ├── engine/        # LangGraph 工作流引擎
 │   ├── services/      # 数据服务层
 │   └── models/        # 数据模型
-├── docker-compose.yml
+├── docker-compose.yml # Docker Compose V2
 └── 开发设计文档.md
 ```
 

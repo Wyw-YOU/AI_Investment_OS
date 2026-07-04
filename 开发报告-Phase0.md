@@ -166,10 +166,10 @@ cp .env.example .env
 # 编辑 .env
 
 # 2. 启动所有服务
-docker-compose up -d
+docker compose up -d
 
 # 3. 查看日志
-docker-compose logs -f backend
+docker compose logs -f backend
 ```
 
 ---

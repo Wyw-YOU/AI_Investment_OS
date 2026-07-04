@@ -9,7 +9,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitState.CLOSED
 
     def test_opens_after_threshold(self):
-        cb = CircuitBreaker(failure_threshold=3, base_delay=0.01, name="test")
+        cb = CircuitBreaker(failure_threshold=3, name="test")
         for _ in range(3):
             with pytest.raises(ValueError):
                 cb.call(self._fail_func)

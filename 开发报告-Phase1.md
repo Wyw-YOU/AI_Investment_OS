@@ -195,7 +195,7 @@ cp .env.example .env
 # 编辑 .env 填入 OPENAI_API_KEY
 
 # Docker 方式
-docker-compose up -d
+docker compose up -d
 
 # 或直接运行
 cd backend

@@ -41,7 +41,7 @@ npm run dev
 ```bash
 cp .env.example .env
 # Edit .env with your LLM provider config
-docker-compose up -d
+docker compose up -d
 ```
 
 ## LLM Provider Configuration

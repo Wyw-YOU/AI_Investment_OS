@@ -3,6 +3,8 @@ from typing import List
 
 
 class Settings(BaseSettings):
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
     app_name: str = "AI Investment OS"
     debug: bool = False
 
@@ -25,10 +27,6 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 24
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 settings = Settings()

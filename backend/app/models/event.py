@@ -1,7 +1,11 @@
 """Market event and alert models."""
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey
 from app.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class MarketEvent(Base):
@@ -15,7 +19,7 @@ class MarketEvent(Base):
     impact_score = Column(Float, default=0.0)
     source = Column(String(100))
     event_time = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
 
 class Alert(Base):
@@ -26,5 +30,5 @@ class Alert(Base):
     stock_code = Column(String(10), nullable=False)
     alert_type = Column(String(30), nullable=False)
     message = Column(Text)
-    is_read = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=_utcnow)

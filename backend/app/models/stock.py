@@ -12,7 +12,7 @@ class StockState(Base):
     market_cap = Column(Float)
     sector = Column(String(50))
     last_analysis = Column(Text, default="{}")
-    last_analysis_at = Column(DateTime)
+    last_analysis_at = Column(DateTime, nullable=True)
     score = Column(Float, default=0.0)
     score_change = Column(Float, default=0.0)
     alert_level = Column(String(20), default="NORMAL")

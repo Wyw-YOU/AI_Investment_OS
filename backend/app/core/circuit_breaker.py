@@ -39,8 +39,8 @@ class CircuitBreaker:
             result = func(*args, **kwargs)
             if self.state == CircuitState.HALF_OPEN:
                 self.state = CircuitState.CLOSED
-                self.failure_count = 0
                 logger.info(f"Circuit {self.name}: HALF_OPEN -> CLOSED")
+            self.failure_count = 0
             return result
         except Exception as e:
             self.failure_count += 1

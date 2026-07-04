@@ -1,7 +1,11 @@
 """Agent log model."""
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, Text, DateTime
 from app.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class AgentLog(Base):
@@ -16,4 +20,4 @@ class AgentLog(Base):
     latency_ms = Column(Integer)
     tokens_used = Column(Integer)
     model_name = Column(String(50))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)

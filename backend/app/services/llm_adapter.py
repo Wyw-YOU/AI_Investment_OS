@@ -4,6 +4,8 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
+from openai import OpenAI
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +37,6 @@ class LLMAdapter:
 
     def _get_client(self):
         if self._client is None:
-            from openai import OpenAI
             self._client = OpenAI(api_key=self.api_key, base_url=self.base_url)
         return self._client
 

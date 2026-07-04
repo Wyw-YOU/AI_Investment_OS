@@ -69,7 +69,7 @@ AI_Investment_OS/
 │   │   └── lib/
 │   ├── package.json
 │   └── tsconfig.json
-├── docker-compose.yml
+├── docker-compose.yml # Docker Compose V2
 └── README.md
 ```
 

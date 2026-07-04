@@ -21,4 +21,4 @@
 **Sprint Total: 28 story points | ~2.5 weeks**
 
 ## Deliverable
-> Production-ready system deployable via `docker-compose up` on a 2C4G server
+> Production-ready system deployable via `docker compose up` on a 2C4G server

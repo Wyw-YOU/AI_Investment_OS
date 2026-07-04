@@ -1,7 +1,11 @@
 """Portfolio model."""
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, Float, DateTime, ForeignKey
 from app.database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class Portfolio(Base):
@@ -15,5 +19,5 @@ class Portfolio(Base):
     risk_score = Column(Float, default=0.0)
     expected_return = Column(Float, default=0.0)
     sector_exposure = Column(Text, default="{}")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

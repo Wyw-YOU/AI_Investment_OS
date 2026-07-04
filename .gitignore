@@ -31,6 +31,7 @@ out/
 Thumbs.db
 
 # Docker
+compose.override.yml
 docker-compose.override.yml
 
 # Test

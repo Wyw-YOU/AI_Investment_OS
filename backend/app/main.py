@@ -1,11 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import warnings
 
 from app.config import settings
 from app.core.logging import setup_logging
 from app.api import stocks, portfolio, alerts, auth
 
-setup_logging()
+if settings.jwt_secret == "change-me-in-production" and not settings.debug:
+    warnings.warn(
+        "JWT_SECRET is using the default value! "
+        "Set a secure secret in your .env file before deploying to production.",
+        stacklevel=1,
+    )
+
+setup_logging(level=settings.log_level, fmt=settings.log_format)
 
 app = FastAPI(
     title="AI Investment OS",
