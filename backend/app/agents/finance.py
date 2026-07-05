@@ -34,10 +34,10 @@ class FinanceAgent(BaseAgent):
             )
 
         if self.llm:
-            return self._analyze_with_llm(stock, fin_data)
+            return self._analyze_with_llm(stock, fin_data, state)
         return self._analyze_rule_based(stock, fin_data)
 
-    def _analyze_with_llm(self, stock: str, fin_data: dict) -> dict:
+    def _analyze_with_llm(self, stock: str, fin_data: dict, state: InvestmentState) -> dict:
         prompt = (
             f"Analyze stock {stock} with the following financial data:\n"
             f"{fin_data}\n\n"
@@ -45,7 +45,7 @@ class FinanceAgent(BaseAgent):
             f"net_profit_growth, debt_ratio, verdict, key_metrics."
         )
         llm_result = self.llm.generate_json(prompt, system_prompt=SYSTEM_PROMPT)
-        if llm_result:
+        if llm_result and self.validate_llm_output(llm_result, ["verdict"]):
             confidence = self._calc_confidence(fin_data)
             evidence = self._extract_evidence(fin_data)
             result = self._build_result(
@@ -54,10 +54,7 @@ class FinanceAgent(BaseAgent):
                 evidence=evidence,
                 reasoning=f"LLM-based fundamental analysis for {stock}.",
             )
-            self._log_run(
-                type("_S", (), {"current_stock": stock})(),
-                result,
-            )
+            self._log_run(state, result)
             return result
         return self._analyze_rule_based(stock, fin_data)
 

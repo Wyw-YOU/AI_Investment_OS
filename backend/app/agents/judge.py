@@ -50,7 +50,7 @@ class JudgeAgent(BaseAgent):
             f"Provide overall judgment as JSON."
         )
         llm_result = self.llm.generate_json(prompt, system_prompt=SYSTEM_PROMPT)
-        if llm_result:
+        if llm_result and self.validate_llm_output(llm_result, ["verdict", "overall_score"]):
             avg_conf = sum(confidences.values()) / max(len(confidences), 1)
             return self._build_result(
                 output=llm_result,

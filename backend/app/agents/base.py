@@ -43,6 +43,13 @@ class BaseAgent(ABC):
             "reasoning": reasoning if reasoning else "no reasoning provided",
         }
 
+    @staticmethod
+    def validate_llm_output(llm_result: dict, required_keys: list[str]) -> bool:
+        """Check that LLM JSON output contains all required keys."""
+        if not isinstance(llm_result, dict):
+            return False
+        return all(key in llm_result for key in required_keys)
+
     def _log_run(self, state: InvestmentState, result: dict):
         logger.info(
             f"Agent[{self.name}] stock={state.current_stock} "

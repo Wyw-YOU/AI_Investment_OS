@@ -53,7 +53,7 @@ class TechnicalAgent(BaseAgent):
             f"resistance_levels, indicators, verdict."
         )
         llm_result = self.llm.generate_json(prompt, system_prompt=SYSTEM_PROMPT)
-        if llm_result:
+        if llm_result and self.validate_llm_output(llm_result, ["verdict", "trend"]):
             return self._build_result(
                 output=llm_result,
                 confidence=0.75,

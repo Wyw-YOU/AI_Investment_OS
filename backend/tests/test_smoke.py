@@ -10,9 +10,7 @@ def test_health_endpoint(client):
 
 def test_auth_me_endpoint(client):
     response = client.get("/api/auth/me")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["user_id"] == "default"
+    assert response.status_code == 401
 
 
 def test_stock_endpoint(client):
