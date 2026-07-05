@@ -6,7 +6,7 @@ import { fetchUnreadAlerts } from "@/lib/api";
 export default function NotificationBell() {
   const { data } = useQuery({
     queryKey: ["unread-alerts"],
-    queryFn: fetchUnreadAlerts,
+    queryFn: () => fetchUnreadAlerts(),
     refetchInterval: 30_000,
   });
 
