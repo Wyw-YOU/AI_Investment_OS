@@ -15,9 +15,9 @@ export default function HotStocks() {
 
   return (
     <div className="border rounded-lg p-4 dark:border-gray-800">
-      <h2 className="font-semibold mb-3">Hot Stocks</h2>
+      <h2 className="font-semibold mb-3">热门股票</h2>
       {stocks.length === 0 ? (
-        <p className="text-sm text-gray-500">No data yet. Start backend to load.</p>
+        <p className="text-sm text-gray-500">暂无数据，请先启动后端服务。</p>
       ) : (
         <div className="space-y-2">
           {stocks.map((s: HotStock) => (

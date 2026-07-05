@@ -21,7 +21,7 @@ export default function PortfolioPage() {
       <Sidebar />
       <main className="flex-1 p-6 space-y-6">
         <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Portfolio</h1>
+          <h1 className="text-2xl font-bold">组合管理</h1>
           <NotificationBell />
         </header>
         <div className="flex gap-4">
@@ -29,7 +29,7 @@ export default function PortfolioPage() {
             {isLoading ? (
               <div className="animate-pulse h-20 bg-gray-100 dark:bg-gray-800 rounded" />
             ) : portfolios.length === 0 ? (
-              <p className="text-sm text-gray-500">No portfolios yet.</p>
+              <p className="text-sm text-gray-500">暂无组合。</p>
             ) : (
               portfolios.map((p: PortfolioSummary) => (
                 <button
@@ -43,7 +43,7 @@ export default function PortfolioPage() {
                 >
                   <div className="font-medium text-sm">{p.name}</div>
                   <div className="text-xs text-gray-500">
-                    Risk: {p.risk_score ?? 0}
+                    风险: {p.risk_score ?? 0}
                   </div>
                 </button>
               ))
@@ -53,7 +53,7 @@ export default function PortfolioPage() {
             {selected ? (
               <PortfolioView portfolioId={selected} />
             ) : (
-              <p className="text-gray-500">Select a portfolio from the left.</p>
+              <p className="text-gray-500">请从左侧选择一个组合。</p>
             )}
           </div>
         </div>

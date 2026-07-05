@@ -13,14 +13,14 @@ export default function StockInput() {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && setCurrentStock(value)}
-        placeholder="Stock code"
+        placeholder="股票代码"
         className="w-24 px-2 py-1 text-sm border rounded dark:bg-gray-900 dark:border-gray-700"
       />
       <button
         onClick={() => setCurrentStock(value)}
         className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded"
       >
-        Go
+        查询
       </button>
     </div>
   );

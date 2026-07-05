@@ -15,9 +15,9 @@ export default function AlertList() {
 
   return (
     <div className="border rounded-lg p-4 dark:border-gray-800">
-      <h2 className="font-semibold mb-3">Alerts</h2>
+      <h2 className="font-semibold mb-3">告警通知</h2>
       {alerts.length === 0 ? (
-        <p className="text-sm text-gray-500">No alerts.</p>
+        <p className="text-sm text-gray-500">暂无告警。</p>
       ) : (
         <div className="space-y-2">
           {alerts.slice(0, 10).map((a: Alert) => (

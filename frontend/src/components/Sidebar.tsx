@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/stock", label: "Stock Workspace" },
-  { href: "/portfolio", label: "Portfolio" },
+  { href: "/", label: "总览" },
+  { href: "/stock", label: "个股分析" },
+  { href: "/portfolio", label: "组合管理" },
 ];
 
 export default function Sidebar() {

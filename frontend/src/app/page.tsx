@@ -10,7 +10,7 @@ export default function DashboardPage() {
       <Sidebar />
       <main className="flex-1 p-6 space-y-6">
         <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">总览</h1>
           <NotificationBell />
         </header>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
