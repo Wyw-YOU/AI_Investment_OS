@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createChart, ColorType, CandlestickSeries } from "lightweight-charts";
+import { createChart, ColorType } from "lightweight-charts";
 
 interface KlineData {
   time: string;
@@ -30,7 +30,7 @@ export default function KlineChart({ data }: { data: KlineData[] }) {
       height: 400,
     });
 
-    const series = chart.addSeries(CandlestickSeries, {
+    const series = chart.addCandlestickSeries({
       upColor: "#ef4444",
       downColor: "#22c55e",
       borderUpColor: "#ef4444",
