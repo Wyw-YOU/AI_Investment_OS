@@ -50,7 +50,7 @@ export default function AnalyzePanel({ stockCode }: Props) {
             AI 分析中...
           </span>
         ) : (
-
+          "开始 AI 分析"
         )}
       </button>
 

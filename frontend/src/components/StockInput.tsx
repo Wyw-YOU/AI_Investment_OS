@@ -27,7 +27,7 @@ export default function StockInput() {
         type="submit"
         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm font-medium transition-colors"
       >
-
+        搜索
       </button>
     </form>
   );
