@@ -1,0 +1,29 @@
+{
+  "skill_name": "bug-hunter",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我检查一下后端代码有没有bug，特别是 agents 和 api 这两个目录，最近加了几个新接口但没怎么测试",
+      "expected_output": "在沙盒中运行 pytest 并进行静态分析，输出按严重等级分类的结构化 bug 列表，等待用户确认",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "前端 build 报错了，你帮我看看 TypeScript 有没有类型问题，顺便检查下 React hooks 用得对不对",
+      "expected_output": "运行 npx tsc --noEmit 和 npm run build，结合静态分析输出前端 bug 列表",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我要上线了，帮我做一个全面的代码审核，重点看安全问题和有没有会影响用户体验的 bug",
+      "expected_output": "全面扫描后端+前端，重点关注安全维度和用户体验维度，输出完整的 bug 列表",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "docker-compose up 报错了，容器起不来，帮我排查一下 Docker 部署问题，看看是 Dockerfile 还是 compose 配置的问题",
+      "expected_output": "运行 docker-compose build/up，收集各服务日志，输出 Docker 相关的 bug 列表，包含构建错误、启动失败、网络问题等",
+      "files": []
+    }
+  ]
+}
