@@ -1,75 +1,120 @@
-"""BaseAgent — abstract base class and Agent Registry.
-
-Every agent inherits BaseAgent and implements run().
-All agents return a standardized dict: output + confidence + evidence + reasoning.
-"""
+import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict
 
-from app.agents.state import InvestmentState
+from app.agents.models import AgentOutput
 
 logger = logging.getLogger(__name__)
 
 
 class BaseAgent(ABC):
     name: str = "base"
+    description: str = ""
 
     @abstractmethod
-    def run(self, state: InvestmentState) -> Dict[str, Any]:
-        """Execute the agent with the given state and return standardized result.
+    def run(self, state: dict) -> AgentOutput:
+        pass
 
-        Returns:
-            {
-                "output": dict,
-                "confidence": float (0.0-1.0),
-                "evidence": list[str],
-                "reasoning": str,
-            }
-        """
-        ...
+    def build_prompt(self, state: dict) -> str:
+        return (
+            f"{self._get_role()}\n\n"
+            f"{self._format_context(state)}\n\n"
+            f"{self._get_task_description()}\n\n"
+            f"{self._get_output_format()}\n\n"
+            f"{self._get_constraints()}"
+        )
 
-    def _build_result(
-        self,
-        output: dict,
-        confidence: float,
-        evidence: list[str],
-        reasoning: str,
-    ) -> dict:
-        return {
-            "output": output,
-            "confidence": max(0.0, min(1.0, confidence)),
-            "evidence": evidence if evidence else ["no evidence provided"],
-            "reasoning": reasoning if reasoning else "no reasoning provided",
-        }
+    def _get_role(self) -> str:
+        return f"[ROLE]\nYou are {self.description}."
 
-    @staticmethod
-    def validate_llm_output(llm_result: dict, required_keys: list[str]) -> bool:
-        """Check that LLM JSON output contains all required keys."""
-        if not isinstance(llm_result, dict):
-            return False
-        return all(key in llm_result for key in required_keys)
+    def _format_context(self, state: dict) -> str:
+        parts = ["[CONTEXT]"]
+        if state.get("stock_code"):
+            parts.append(f"Stock: {state['stock_code']} ({state.get('stock_name', '')})")
+        for key in ["market_data", "financial_data", "news_data", "indicators", "agent_outputs"]:
+            data = state.get(key)
+            if data:
+                parts.append(f"\n## {key}:\n{json.dumps(data, ensure_ascii=False, indent=2)[:3000]}")
+        return "\n".join(parts)
 
-    def _log_run(self, state: InvestmentState, result: dict):
-        logger.info(
-            f"Agent[{self.name}] stock={state.current_stock} "
-            f"confidence={result['confidence']:.2f}"
+    def _get_task_description(self) -> str:
+        return "[TASK]\nAnalyze the provided data and produce structured output."
+
+    def _get_output_format(self) -> str:
+        return '[OUTPUT FORMAT]\nRespond with a single JSON object. Wrap in ```json``` if needed.'
+
+    def _get_constraints(self) -> str:
+        return (
+            "[CONSTRAINTS]\n"
+            "- Base analysis only on provided data\n"
+            "- Cite specific numbers\n"
+            "- Provide confidence 0.0-1.0\n"
+            "- Respond in Chinese for text, English for JSON keys"
+        )
+
+    def parse_response(self, response: str) -> dict:
+        text = response.strip()
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0].strip()
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0].strip()
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return {"raw_response": response, "parse_error": True}
+
+    def _calculate_confidence(self, result: dict, state: dict) -> float:
+        if result.get("parse_error"):
+            return 0.1
+        expected_keys = self._get_expected_output_keys()
+        if not expected_keys:
+            return 0.7
+        present = sum(1 for k in expected_keys if k in result and result[k])
+        return round(min(1.0, present / len(expected_keys) * 0.9 + 0.1), 2)
+
+    def _extract_citations(self, result: dict, state: dict) -> list[str]:
+        citations = result.get("citations", [])
+        if state.get("stock_code"):
+            citations.append(f"Stock data: {state['stock_code']}")
+        return list(set(citations))
+
+    def _get_expected_output_keys(self) -> list[str]:
+        return []
+
+    def _create_output(self, result: dict, state: dict) -> AgentOutput:
+        return AgentOutput(
+            agent_name=self.name,
+            result=result,
+            confidence=self._calculate_confidence(result, state),
+            citations=self._extract_citations(result, state),
+        )
+
+    def _create_error_output(self, error: str) -> AgentOutput:
+        return AgentOutput(
+            agent_name=self.name,
+            result={"error": error},
+            confidence=0.0,
         )
 
 
-AGENT_REGISTRY: dict[str, BaseAgent] = {}
+class LLMAgent(BaseAgent):
+    def __init__(self, temperature: float = 0.3, max_tokens: int = 2000):
+        self.temperature = temperature
+        self.max_tokens = max_tokens
 
-
-def register_agent(agent: BaseAgent):
-    AGENT_REGISTRY[agent.name] = agent
-    return agent
-
-
-def get_agent(name: str) -> BaseAgent:
-    if name not in AGENT_REGISTRY:
-        raise KeyError(f"Agent '{name}' not found in registry")
-    return AGENT_REGISTRY[name]
-
-
-def list_agents() -> list[str]:
-    return list(AGENT_REGISTRY.keys())
+    def run(self, state: dict) -> AgentOutput:
+        try:
+            prompt = self.build_prompt(state)
+            from app.services.llm_adapter import get_llm
+            llm = get_llm()
+            response = llm.chat(
+                system_prompt=self._get_role(),
+                user_prompt=prompt,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )
+            result = self.parse_response(response)
+            return self._create_output(result, state)
+        except Exception as e:
+            logger.error(f"Agent {self.name} failed: {e}")
+            return self._create_error_output(str(e))

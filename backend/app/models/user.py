@@ -1,19 +1,18 @@
-"""User model."""
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, Text, DateTime
+import datetime
+
+from sqlalchemy import DateTime, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+
 from app.database import Base
-
-
-def _utcnow():
-    return datetime.now(timezone.utc)
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String(36), primary_key=True)
-    username = Column(String(50), nullable=False, unique=True)
-    email = Column(String(100), unique=True)
-    risk_profile = Column(Text, default="{}")
-    created_at = Column(DateTime, default=_utcnow)
-    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(20), default="user")
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )

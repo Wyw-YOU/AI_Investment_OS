@@ -1,44 +1,82 @@
-"""InvestmentState — shared state for the multi-agent workflow.
-
-All agents read from and write to this state. Agents never communicate
-directly; they interact only through this state object.
-"""
-from dataclasses import dataclass, field
-from typing import Any
+import operator
+import uuid
+from datetime import datetime
+from enum import Enum
+from typing import Annotated, Any, TypedDict
 
 
-@dataclass
-class InvestmentState:
-    user_id: str = ""
+class WorkflowPhase(str, Enum):
+    INIT = "init"
+    ANALYZING = "analyzing"
+    RISK_ASSESSING = "risk_assessing"
+    SCORING = "scoring"
+    REPORTING = "reporting"
+    COMPLETE = "complete"
+    FAILED = "failed"
 
-    stock_pool: list[str] = field(default_factory=list)
-    current_stock: str = ""
 
-    market_data: dict = field(default_factory=dict)
-    financial_data: dict = field(default_factory=dict)
-    news_data: list = field(default_factory=list)
-    indicators: dict = field(default_factory=dict)
+class WorkflowState(TypedDict, total=False):
+    # Core identifiers
+    task_id: str
+    stock_code: str
+    stock_name: str
+    user_id: str
+    query: str
 
-    agent_outputs: dict[str, dict] = field(default_factory=dict)
-    agent_confidence: dict[str, float] = field(default_factory=dict)
+    # Phase tracking
+    phase: str
+    started_at: str
+    updated_at: str
 
-    risk_profile: dict = field(default_factory=dict)
+    # Input data
+    market_data: dict[str, Any]
+    news_data: list[dict[str, Any]]
+    financial_data: dict[str, Any]
+    price_history: list[dict[str, Any]]
+    indicators: dict[str, Any]
 
-    portfolio: dict = field(default_factory=dict)
-    candidate_pool: list[str] = field(default_factory=list)
+    # Agent outputs (parallel-safe with Annotated)
+    parallel_results: Annotated[list[dict], operator.add]
+    agent_outputs: dict[str, Any]
 
-    final_report: dict = field(default_factory=dict)
+    # Sequential outputs
+    risk_assessment: dict[str, Any]
+    quant_score: dict[str, Any]
+    final_report: dict[str, Any]
 
-    events: list = field(default_factory=list)
+    # Error tracking
+    errors: Annotated[list[dict], operator.add]
 
-    decision: str = ""  # buy | sell | hold | watch
 
-    def set_agent_output(self, agent_name: str, result: dict):
-        self.agent_outputs[agent_name] = result.get("output", {})
-        self.agent_confidence[agent_name] = result.get("confidence", 0.0)
-
-    def get_agent_output(self, agent_name: str) -> dict:
-        return self.agent_outputs.get(agent_name, {})
-
-    def get_agent_confidence(self, agent_name: str) -> float:
-        return self.agent_confidence.get(agent_name, 0.0)
+def create_initial_state(
+    stock_code: str,
+    stock_name: str = "",
+    query: str = "",
+    user_id: str = "",
+    market_data: dict | None = None,
+    news_data: list | None = None,
+    financial_data: dict | None = None,
+    price_history: list | None = None,
+    indicators: dict | None = None,
+) -> WorkflowState:
+    return WorkflowState(
+        task_id=str(uuid.uuid4()),
+        stock_code=stock_code,
+        stock_name=stock_name,
+        user_id=user_id,
+        query=query,
+        phase=WorkflowPhase.INIT.value,
+        started_at=datetime.now().isoformat(),
+        updated_at=datetime.now().isoformat(),
+        market_data=market_data or {},
+        news_data=news_data or [],
+        financial_data=financial_data or {},
+        price_history=price_history or [],
+        indicators=indicators or {},
+        parallel_results=[],
+        agent_outputs={},
+        risk_assessment={},
+        quant_score={},
+        final_report={},
+        errors=[],
+    )

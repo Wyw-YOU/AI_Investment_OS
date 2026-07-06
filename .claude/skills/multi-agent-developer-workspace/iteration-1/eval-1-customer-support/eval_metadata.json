@@ -1,0 +1,47 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-1-customer-support",
+  "prompt": "Design and implement a multi-agent system for automated customer support. The system should handle incoming support tickets, classify them by urgency and topic, route to specialized agents (technical support, billing, general inquiries), and generate responses. Include LangGraph workflow orchestration, structured prompts for each agent, and state management for tracking ticket status. Provide complete Python code implementation.",
+  "assertions": [
+    {
+      "text": "Code includes BaseAgent abstract class with standard interface (name, description, run method)",
+      "type": "structural"
+    },
+    {
+      "text": "System defines at least 4 specialized agents (Classifier, Technical, Billing, General, Response)",
+      "type": "structural"
+    },
+    {
+      "text": "State management uses TypedDict or Pydantic with proper type hints",
+      "type": "structural"
+    },
+    {
+      "text": "LangGraph workflow is properly defined with StateGraph and nodes",
+      "type": "structural"
+    },
+    {
+      "text": "Prompts follow structured format with ROLE, CONTEXT, TASK, and OUTPUT FORMAT sections",
+      "type": "quality"
+    },
+    {
+      "text": "Workflow includes parallel execution paths for independent agents",
+      "type": "structural"
+    },
+    {
+      "text": "Error handling is implemented with try-catch blocks and fallback mechanisms",
+      "type": "quality"
+    },
+    {
+      "text": "Output validation is present using Pydantic validators or similar",
+      "type": "quality"
+    },
+    {
+      "text": "Code is production-ready with logging, proper imports, and clear documentation",
+      "type": "quality"
+    },
+    {
+      "text": "Agent outputs include confidence scores and citations/sources",
+      "type": "quality"
+    }
+  ]
+}

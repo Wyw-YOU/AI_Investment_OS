@@ -1,0 +1,16 @@
+# Multi-Agent Investment Analysis System — Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core LangChain / LangGraph
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langgraph>=0.2.0
+
+# LLM & ML
+openai>=1.30.0
+
+# Data validation & schemas
+pydantic>=2.7.0
+
+# Utilities
+python-dotenv>=1.0.0

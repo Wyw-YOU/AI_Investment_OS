@@ -1,0 +1,11 @@
+# Investment Analysis System - Dependencies
+
+# Core framework
+langgraph>=0.2.0
+pydantic>=2.0.0
+
+# LLM integration (OpenAI-compatible API)
+openai>=1.0.0
+
+# Development & Testing
+pytest>=7.0.0

@@ -1,27 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { useAppStore } from "@/stores/appStore";
+import { useRouter } from "next/navigation";
 
 export default function StockInput() {
-  const { currentStock, setCurrentStock } = useAppStore();
-  const [value, setValue] = useState(currentStock);
+  const [code, setCode] = useState("");
+  const router = useRouter();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim()) {
+      router.push(`/stock/${code.trim()}`);
+    }
+  };
 
   return (
-    <div className="flex gap-1">
+    <form onSubmit={handleSubmit} className="flex gap-2">
       <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && setCurrentStock(value)}
-        placeholder="股票代码"
-        className="w-24 px-2 py-1 text-sm border rounded dark:bg-gray-900 dark:border-gray-700"
+        type="text"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder="  输入股票代码 (如 600519)"
+        className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-64"
       />
       <button
-        onClick={() => setCurrentStock(value)}
-        className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded"
+        type="submit"
+        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm font-medium transition-colors"
       >
-        查询
+
       </button>
-    </div>
+    </form>
   );
 }

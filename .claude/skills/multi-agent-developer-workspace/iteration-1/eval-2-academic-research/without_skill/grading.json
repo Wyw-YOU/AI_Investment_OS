@@ -1,0 +1,56 @@
+{
+  "eval_id": 2,
+  "run_type": "without_skill",
+  "expectations": [
+    {
+      "text": "System includes at least 5 specialized agents (Extractor, Quality, Summary, Gap, Literature Review)",
+      "passed": true,
+      "evidence": "All 5 specialized agent classes are present in separate files: PaperExtractorAgent (paper_extractor.py), QualityAnalyzerAgent (quality_analyzer.py), SummaryGeneratorAgent (summary_generator.py), GapAnalyzerAgent (gap_analyzer.py), LiteratureReviewAgent (literature_review.py). Each has a dedicated __init__.py module and is registered in the workflow via workflow.py."
+    },
+    {
+      "text": "Prompts contain domain-specific academic terminology and analysis frameworks",
+      "passed": true,
+      "evidence": "prompts.py contains extensive domain-specific terminology across all agents. Examples: QualityAnalyzer prompt references 'internal validity (control groups, confounders, blinding, randomization)', 'external validity (generalizability, ecological validity)', 'p-hacking, HARKing (Hypothesizing After Results are Known)', and provides calibrated scoring criteria. GapAnalyzer prompt distinguishes 'methodological gaps (wrong/insufficient methods used), empirical gaps (topics not studied), and theoretical gaps (frameworks missing)'. LiteratureReview prompt uses formal academic register with '(Author, Year)' citation format, hedging language guidance, and synthesis vs. summarization distinction. PaperExtractor prompt references 'frequentist, Bayesian, ML-based' statistical methods and 'qualitative and quantitative' sample size descriptions."
+    },
+    {
+      "text": "Paper extraction agent outputs structured data (title, authors, abstract, methodology, findings)",
+      "passed": true,
+      "evidence": "PaperExtractorAgent.extract() returns a structured dict with all required fields: title, authors (list of {name, affiliation, email}), abstract, methodology, methodology_type, key_findings, plus extras (year, journal_or_venue, doi, keywords, limitations, data_sources, sample_size, statistical_methods, research_questions, hypotheses, conclusion, references_count). The _parse_response() method validates required fields ('title', 'authors', 'abstract'), normalizes author structure, ensures list fields are lists, and validates methodology_type against a known set. The state.py ExtractedPaper dataclass mirrors this structure with fields for title, authors (list[Author]), abstract, methodology, key_findings."
+    },
+    {
+      "text": "Quality analysis includes metrics for research rigor, novelty, and significance",
+      "passed": true,
+      "evidence": "QualityAssessment in state.py includes: novelty_level (NoveltyLevel enum: groundbreaking/highly_novel/moderately_novel/incremental/duplicative), rigor_level (RigorLevel enum: exemplary/strong/adequate/weak/poor), significance_score (0-10), methodology_score (0-10), clarity_score (0-10), reproducibility_score (0-10), impact_potential_score (0-10), overall_quality_score (0-10). The QualityAnalyzer prompt defines explicit scoring criteria for each dimension. _parse_response() clamps all scores to [0,10] and validates enum values. Additional quality dimensions include strengths, weaknesses, ethical_considerations, bias_assessment, and validity_threats."
+    },
+    {
+      "text": "Workflow supports parallel paper processing",
+      "passed": true,
+      "evidence": "workflow.py implements a fan-out/fan-in pattern. fan_out_papers_node() creates one task per paper and executes them via 'asyncio.gather(*tasks, return_exceptions=True)' for true concurrent execution. Each task runs through a per-paper subgraph (build_paper_subgraph) with extract -> quality -> summary pipeline. Results are collected into processed_papers with per-paper error handling. config.py includes 'max_concurrent_papers: int = 5' configuration. The workflow docstring explicitly states 'Fan-out/fan-in pattern for parallel paper processing'."
+    },
+    {
+      "text": "State management tracks paper corpus with metadata",
+      "passed": true,
+      "evidence": "AcademicResearchState (TypedDict in state.py) tracks: paper_texts (list[str]), research_topic, review_focus, processed_papers (list[dict] containing per-paper extraction/quality/summary/stage/error), literature_review, gap_analysis, current_step, errors, processing_log, config. ProcessedPaper dataclass holds paper_id, original_text, stage (PaperStage enum: RAW/EXTRACTED/QUALITY_ASSESSED/SUMMARIZED/GAPS_IDENTIFIED/SYNTHESIZED/ERROR), extraction, quality, summary, gaps, error. SubgraphState tracks per-paper processing state with paper_text, paper_id, paper_index, extraction, quality, summary, error, stage."
+    },
+    {
+      "text": "Gap analysis identifies research opportunities and future directions",
+      "passed": true,
+      "evidence": "GapAnalyzerAgent outputs a GapAnalysis dict with: research_gaps (list of ResearchGap with gap_title, gap_description, supporting_evidence, papers_evidencing, potential_impact, suggested_approach, estimated_feasibility, priority, related_keywords), future_directions (list of FutureDirection with title, description, rationale, suggested_methodology, expected_challenges, potential_contribution, timeframe, required_expertise), plus overarching_themes, methodology_gaps, theoretical_gaps, empirical_gaps. The prompt instructs: 'Distinguish between methodological gaps, empirical gaps, and theoretical gaps' and 'Prioritize gaps by: (1) frequency of evidence, (2) potential impact, (3) feasibility'."
+    },
+    {
+      "text": "Literature review synthesis combines multiple papers coherently",
+      "passed": true,
+      "evidence": "LiteratureReviewAgent.synthesize() accepts all processed_papers and builds a combined analysis text (_build_papers_analyses + _build_quality_assessments + _build_gap_analysis_text). The LIT_REVIEW_SYSTEM prompt instructs the agent to 'Organize review papers thematically rather than chronologically or paper-by-paper', 'goes beyond summarization to provide genuine synthesis: connecting findings, resolving apparent contradictions', and 'each thematic section draws on multiple papers, not just one'. The output structure includes thematic_analysis (dict of theme->analysis), methodology_comparison, findings_synthesis, contradictions_and_debates, and bibliography. LiteratureReview dataclass in state.py has all corresponding fields."
+    },
+    {
+      "text": "Code includes proper citation tracking and source attribution",
+      "passed": false,
+      "evidence": "Citation tracking is handled only at the prompt level. LIT_REVIEW_HUMAN instructs the LLM to 'Cite papers using (Author, Year) format within the text' and output a bibliography list. However, there is no structured citation tracking system: no citation IDs, no cross-reference mapping between in-text citations and bibliography entries, no DOI-based linking, and no formal reference management. The bibliography is a list[str] with no validation. The gap analyzer's 'papers_evidencing' field uses paper titles as strings rather than stable IDs. There is no CitationTracker or similar class. This is prompt-level guidance only, not a code-level implementation."
+    },
+    {
+      "text": "Implementation is production-ready with comprehensive error handling",
+      "passed": true,
+      "evidence": "Comprehensive error handling is present throughout: (1) Every agent's main method has try/except with proper 'raise' re-propagation and logging (paper_extractor.py:76-78, quality_analyzer.py:89-102, etc.). (2) workflow.py uses 'asyncio.gather(*tasks, return_exceptions=True)' and handles Exception results individually per paper (line 158-176). (3) All workflow nodes check for missing/stale state (e.g., 'if state.get(\"stage\") == \"error\"') and return gracefully rather than crashing. (4) JSON parsing in all agents handles markdown code fences and validates required fields with defaults. (5) main.py provides multiple entry points: CLI with argparse, programmatic API via AcademicResearchPipeline class, sync wrapper (analyze_sync). (6) config.py supports 3 LLM providers with clear ImportError messages, env-var-based configuration (create_config_from_env), and quick_setup convenience function. (7) test_pipeline.py includes unit tests for each agent and an integration test for the full pipeline. (8) Per-paper error isolation ensures one paper's failure does not block others."
+    }
+  ]
+}

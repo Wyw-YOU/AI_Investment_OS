@@ -1,49 +1,84 @@
-"""Pydantic schemas for API request/response validation."""
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, List
 from datetime import datetime
 
-
-class PortfolioBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    holdings: Dict[str, float] = Field(default_factory=dict)
-    candidate_pool: List[str] = Field(default_factory=list)
+from pydantic import BaseModel, EmailStr
 
 
-class PortfolioCreate(PortfolioBase):
-    pass
+# Auth
+class UserCreate(BaseModel):
+    email: str
+    password: str
 
 
-class PortfolioResponse(PortfolioBase):
-    id: str
-    user_id: str
-    risk_score: float = 0.0
-    expected_return: float = 0.0
-    sector_exposure: Dict[str, float] = Field(default_factory=dict)
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    role: str
     created_at: datetime
-    updated_at: datetime
 
-    model_config = {"from_attributes": True}
-
-
-class StockAnalysisRequest(BaseModel):
-    stock_code: str = Field(..., pattern=r"^\d{6}$")
+    class Config:
+        from_attributes = True
 
 
-class StockAnalysisResponse(BaseModel):
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+# Stock
+class StockResponse(BaseModel):
+    stock_code: str
+    name: str
+    market: str
+    industry: str
+    price: float = 0.0
+    change_pct: float = 0.0
+
+
+# Workspace
+class WorkspaceCreate(BaseModel):
+    stock_code: str
+    name: str = ""
+
+
+class WorkspaceResponse(BaseModel):
+    id: int
+    stock_code: str
+    name: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NoteCreate(BaseModel):
+    content: str
+    tags: str = ""
+
+
+# Agent
+class AgentRunRequest(BaseModel):
+    stock_code: str
+    query: str = ""
+
+
+class AgentTaskResponse(BaseModel):
+    id: int
     stock_code: str
     status: str
-    analysis: Optional[Dict] = None
+    created_at: datetime
+    completed_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
 
 
-class AgentOutput(BaseModel):
-    output: Dict
-    confidence: float = Field(..., ge=0.0, le=1.0)
-    evidence: List[str] = Field(..., min_length=1)
-    reasoning: str = Field(..., min_length=10)
-
-
-class StandardResponse(BaseModel):
-    status: str = "success"
-    data: Optional[Dict] = None
-    error: Optional[str] = None
+# Standard API Response
+class ApiResponse(BaseModel):
+    code: int = 0
+    message: str = "success"
+    data: dict | list | None = None

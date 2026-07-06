@@ -1,0 +1,47 @@
+{
+  "eval_id": 3,
+  "eval_name": "eval-3-investment-analysis",
+  "prompt": "Design a multi-agent investment analysis system similar to AI Investment OS. The system should analyze stocks using multiple specialized agents: News Agent (sentiment analysis), Financial Agent (fundamental analysis), Technical Agent (chart patterns and indicators), Risk Agent (risk assessment), and Report Agent (synthesis). Implement the complete workflow with LangGraph, including: parallel agent execution, structured prompts for financial analysis, state management for tracking analysis progress, and output validation. Provide production-ready code with error handling.",
+  "assertions": [
+    {
+      "text": "System implements all 5 core agents (News, Financial, Technical, Risk, Report)",
+      "type": "structural"
+    },
+    {
+      "text": "News Agent includes sentiment analysis with confidence scoring",
+      "type": "quality"
+    },
+    {
+      "text": "Financial Agent analyzes key metrics (PE, ROE, revenue growth, etc.)",
+      "type": "quality"
+    },
+    {
+      "text": "Technical Agent covers multiple indicators (RSI, MACD, moving averages)",
+      "type": "quality"
+    },
+    {
+      "text": "Risk Agent provides risk scoring and factor analysis",
+      "type": "quality"
+    },
+    {
+      "text": "Report Agent synthesizes all agent outputs into coherent report",
+      "type": "quality"
+    },
+    {
+      "text": "LangGraph workflow includes parallel execution for independent analysis agents",
+      "type": "structural"
+    },
+    {
+      "text": "State management uses TypedDict with proper investment-specific fields",
+      "type": "structural"
+    },
+    {
+      "text": "All agents produce structured JSON outputs with confidence scores",
+      "type": "quality"
+    },
+    {
+      "text": "Code includes citation tracking and source attribution for all claims",
+      "type": "quality"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+服务器：2核4G + Ubuntu（希望接入docker配置）
+本地：win11 + PyCharm
+LLM大模型可以接入deepseek、xiaomi mimo

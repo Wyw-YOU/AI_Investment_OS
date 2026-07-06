@@ -1,0 +1,47 @@
+{
+  "eval_id": 2,
+  "eval_name": "eval-2-academic-research",
+  "prompt": "Build a multi-agent research system for analyzing and summarizing academic papers. The system should: 1) Extract key information (title, authors, abstract, methodology, findings) 2) Analyze research quality and novelty 3) Generate literature review summaries 4) Identify research gaps and future directions. Include complete agent implementations with specialized prompts, workflow orchestration, and state management. Focus on making the prompts domain-specific and effective for academic analysis.",
+  "assertions": [
+    {
+      "text": "System includes at least 5 specialized agents (Extractor, Quality, Summary, Gap, Literature Review)",
+      "type": "structural"
+    },
+    {
+      "text": "Prompts contain domain-specific academic terminology and analysis frameworks",
+      "type": "quality"
+    },
+    {
+      "text": "Paper extraction agent outputs structured data (title, authors, abstract, methodology, findings)",
+      "type": "structural"
+    },
+    {
+      "text": "Quality analysis includes metrics for research rigor, novelty, and significance",
+      "type": "quality"
+    },
+    {
+      "text": "Workflow supports parallel paper processing",
+      "type": "structural"
+    },
+    {
+      "text": "State management tracks paper corpus with metadata",
+      "type": "structural"
+    },
+    {
+      "text": "Gap analysis identifies research opportunities and future directions",
+      "type": "quality"
+    },
+    {
+      "text": "Literature review synthesis combines multiple papers coherently",
+      "type": "quality"
+    },
+    {
+      "text": "Code includes proper citation tracking and source attribution",
+      "type": "quality"
+    },
+    {
+      "text": "Implementation is production-ready with comprehensive error handling",
+      "type": "quality"
+    }
+  ]
+}

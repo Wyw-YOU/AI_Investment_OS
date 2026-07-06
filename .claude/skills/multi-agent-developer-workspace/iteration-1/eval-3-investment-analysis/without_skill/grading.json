@@ -1,0 +1,56 @@
+{
+  "eval_id": 3,
+  "run_type": "without_skill",
+  "expectations": [
+    {
+      "text": "System implements all 5 core agents (News, Financial, Technical, Risk, Report)",
+      "passed": true,
+      "evidence": "All 5 agents are implemented as separate classes inheriting from BaseAgent: NewsAgent (agents/news_agent.py), FinancialAgent (agents/financial_agent.py), TechnicalAgent (agents/technical_agent.py), RiskAgent (agents/risk_agent.py), and ReportAgent (agents/report_agent.py). All are exported in agents/__init__.py and imported/used in workflow.py lines 46-52. Each agent has a unique agent_name property, output_schema, and build_prompt method."
+    },
+    {
+      "text": "News Agent includes sentiment analysis with confidence scoring",
+      "passed": true,
+      "evidence": "NewsAgentOutput (schemas.py lines 123-149) includes: sentiment_label (SentimentLabel enum: very_positive through very_negative), sentiment_score (float -1.0 to +1.0), trend (TrendDirection enum), and inherits confidence (float 0.0-1.0) from BaseAgentOutput. The NEWS_PROMPT_TEMPLATE (prompts.py lines 34-71) explicitly instructs the LLM to 'Assess the overall sentiment', 'Assign a numeric sentiment_score from -1.0 to +1.0', and 'Include a confidence field (0.0 to 1.0)'. Individual NewsItem objects also carry per-article sentiment labels and relevance scores."
+    },
+    {
+      "text": "Financial Agent analyzes key metrics (PE, ROE, revenue growth, etc.)",
+      "passed": true,
+      "evidence": "The FINANCIAL_PROMPT_TEMPLATE (prompts.py lines 90-129) explicitly instructs: 'Analyze key financial metrics: P/E, P/S, P/B, EV/EBITDA, ROE, ROIC, debt-to-equity, free cash flow yield, revenue growth, EPS growth, margins.' The FinancialAgentOutput schema (schemas.py lines 169-204) includes key_metrics as a list of FinancialMetric objects (name, value, sector_avg, percentile, assessment), plus valuation_score, quality_score, growth_score, fair_value_estimate, strengths, and weaknesses. FinancialAgent docstring (financial_agent.py lines 26-32) also documents ROE, ROIC, margins, P/E, P/S, P/B, EV/EBITDA as explicit responsibilities."
+    },
+    {
+      "text": "Technical Agent covers multiple indicators (RSI, MACD, moving averages)",
+      "passed": true,
+      "evidence": "The TECHNICAL_PROMPT_TEMPLATE (prompts.py lines 148-196) explicitly instructs: 'Evaluate at least 6 technical indicators: RSI, MACD, Moving Averages (SMA 20/50/200), Bollinger Bands, VWAT, ATR, OBV, Stochastic, or others relevant to the stock.' The TechnicalAgentOutput schema (schemas.py lines 230-253) includes indicators as a list of TechnicalIndicator objects (name, value, signal, explanation) and patterns as a list of ChartPattern objects. The TechnicalAgent docstring (technical_agent.py lines 25-30) lists RSI, MACD, MAs, Bollinger Bands, ATR, OBV, Stochastic, VWAP as explicit responsibilities."
+    },
+    {
+      "text": "Risk Agent provides risk scoring and factor analysis",
+      "passed": true,
+      "evidence": "RiskAgentOutput (schemas.py lines 272-300) includes: overall_risk_level (RiskLevel enum: very_low through very_high), risk_score (float 0-100), risk_factors as a list of RiskFactor objects (category, description, severity as RiskLevel, probability 0-1, mitigation), volatility_assessment, max_drawdown_estimate, beta_estimate, sharpe_ratio, position_sizing_advice, and stop_loss_recommendation. The RISK_PROMPT_TEMPLATE (prompts.py lines 215-257) instructs: 'Identify at least 5 distinct risk factors across different categories', 'Assess severity and probability', 'Assign an overall risk_level and a risk_score (0-100)'."
+    },
+    {
+      "text": "Report Agent synthesizes all agent outputs into coherent report",
+      "passed": true,
+      "evidence": "ReportAgent (report_agent.py) receives all four agent outputs via run(ticker, news_output=..., financial_output=..., technical_output=..., risk_output=...) in workflow.py lines 219-225. The REPORT_PROMPT_TEMPLATE (prompts.py lines 276-342) provides all four analyses as INPUT sections and instructs synthesis into a unified recommendation. InvestmentReport schema (schemas.py lines 307-361) includes recommendation (strong_buy through strong_sell), conviction_level, composite_score (weighted), price_target_bull/base/bear, time_horizon, key_catalysts, key_risks, actionable_summary, and agent_scores (per-agent contribution). The report node in workflow.py (_report_node, lines 202-242) passes all agent outputs to ReportAgent."
+    },
+    {
+      "text": "LangGraph workflow includes parallel execution for independent analysis agents",
+      "passed": true,
+      "evidence": "workflow.py build_analysis_graph() (lines 263-341) adds all four agent nodes (news_agent, financial_agent, technical_agent, risk_agent) and wires parallel execution via four separate edges from START to each agent (lines 317-320): graph.add_edge(START, 'news_agent'), graph.add_edge(START, 'financial_agent'), etc. The comment on lines 315-316 states: 'Edges from START to each agent -- LangGraph executes these in parallel when they share no data dependencies.' All four agents feed into a single merge node (lines 323-326), which is the standard LangGraph fan-out/fan-in pattern for parallel execution. The graph topology diagram (lines 7-35) also illustrates the parallel structure."
+    },
+    {
+      "text": "State management uses TypedDict with proper investment-specific fields",
+      "passed": true,
+      "evidence": "InvestmentState (state.py lines 35-107) is defined as a TypedDict with total=False containing investment-specific fields: ticker (str), analysis_request (dict), per-agent output fields (news_output, financial_output, technical_output, risk_output, report_output), agent_statuses (dict[str, AgentStatus]), completed_agents/failed_agents (list[str]), errors/warnings (list[str]), started_at/completed_at (str ISO timestamps), overall_status (str), and merge_results (dict). AgentStatus (state.py lines 25-33) is also a TypedDict tracking state, started_at, completed_at, error, and retry_count. The create_initial_state factory (lines 109-159) initializes all agents as 'pending'."
+    },
+    {
+      "text": "All agents produce structured JSON outputs with confidence scores",
+      "passed": true,
+      "evidence": "Every agent output schema inherits from BaseAgentOutput (schemas.py lines 78-106) which requires a confidence field: 'confidence: float = Field(ge=0.0, le=1.0, description=\"Agent confidence in its own analysis (0-1)\")'. The base agent run() method (base.py lines 115-155) validates output against the Pydantic schema via validate_agent_output() and serializes via serialize_agent_output() which uses model_dump_json(). The fallback output (utils.py lines 181-248) also sets confidence=0.0 for failed agents. All prompts include the instruction 'Always include a confidence field (0.0 to 1.0)' in the system preamble (prompts.py lines 18-23). Every output schema (NewsAgentOutput, FinancialAgentOutput, TechnicalAgentOutput, RiskAgentOutput, InvestmentReport) includes the confidence field via inheritance."
+    },
+    {
+      "text": "Code includes citation tracking and source attribution for all claims",
+      "passed": true,
+      "evidence": "A dedicated Citation model (schemas.py lines 66-76) defines source, title, date, and snippet fields. BaseAgentOutput (schemas.py lines 91-94) includes 'citations: list[Citation] = Field(default_factory=list, description=\"Sources referenced during analysis\")', meaning every agent output inherits citation tracking. All prompt templates instruct citation inclusion: News prompt says 'Include citations for all news sources used' (line 46), Financial prompt says 'Include citations for all data sources' (line 102), Technical prompt says 'Include reasoning and citations for all indicators' (line 162), Risk prompt says 'Include citations' (via schema in line 236). The NEWS_PROMPT_TEMPLATE output schema explicitly includes a citations array structure. The fallback output (utils.py line 199) also initializes citations as an empty list."
+    }
+  ]
+}

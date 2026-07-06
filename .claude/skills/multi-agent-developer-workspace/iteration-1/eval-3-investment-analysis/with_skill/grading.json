@@ -1,0 +1,56 @@
+{
+  "eval_id": 3,
+  "run_type": "with_skill",
+  "expectations": [
+    {
+      "text": "System implements all 5 core agents (News, Financial, Technical, Risk, Report)",
+      "passed": true,
+      "evidence": "All 5 agents are implemented as separate classes inheriting from LLMAgent/BaseAgent: NewsAgent (news_agent.py, line 17), FinancialAgent (financial_agent.py, line 17), TechnicalAgent (technical_agent.py, line 17), RiskAgent (risk_agent.py, line 18), ReportAgent (report_agent.py, line 17). Each has a unique `name` attribute and implements `run(state) -> AgentOutput`. The workflow in workflow.py (lines 326-333) registers all 5 as nodes: 'planner', 'news', 'financial', 'technical', 'risk', 'report'."
+    },
+    {
+      "text": "News Agent includes sentiment analysis with confidence scoring",
+      "passed": true,
+      "evidence": "NewsAgent._get_expected_output_keys() (news_agent.py, line 46) returns ['sentiment', 'sentiment_score', 'events', 'risk_factors']. The NewsAnalysis Pydantic model (models.py, lines 92-99) defines `sentiment: Sentiment` (enum: BULLISH/BEARISH/NEUTRAL) and `sentiment_score: float = Field(ge=0.0, le=1.0)`. The prompt (prompts.py, lines 117-120) explicitly requests 'Classify sentiment as bullish, bearish, or neutral' and 'Assign sentiment score from 0.0 to 1.0'. Confidence scoring is implemented via `_calculate_confidence()` (news_agent.py, lines 48-77) which weights LLM confidence, news data availability, and result completeness. The fallback output (news_agent.py, line 109) returns `sentiment_score: 0.5` with `confidence: 0.1`."
+    },
+    {
+      "text": "Financial Agent analyzes key metrics (PE, ROE, revenue growth, etc.)",
+      "passed": true,
+      "evidence": "The FinancialAnalysis model (models.py, lines 128-135) includes: ProfitabilityMetrics with roe/roa/gross_margin/net_margin (lines 102-107), GrowthMetrics with revenue_growth/earnings_growth/growth_trend (lines 109-112), ValuationMetrics with pe_ratio/pb_ratio/peg_ratio/assessment (lines 115-119), and HealthMetrics with debt_to_equity/current_ratio/health_score (lines 122-126). The prompt (prompts.py, lines 226-248) explicitly instructs analysis of ROE, ROA, gross margin, net margin, revenue growth, earnings growth, P/E ratio, P/B ratio, PEG ratio, debt-to-equity, and current ratio. Mock LLM response in main.py (lines 383-414) demonstrates all these metrics populated."
+    },
+    {
+      "text": "Technical Agent covers multiple indicators (RSI, MACD, moving averages)",
+      "passed": false,
+      "evidence": "RSI and MACD are explicitly implemented: IndicatorData model (models.py, lines 149-153) defines rsi, rsi_signal, macd, and macd_histogram fields. The prompt (prompts.py, lines 338-341) requests 'RSI (14-period): current value and interpretation' and 'MACD: signal line crossover status and histogram'. However, moving averages (SMA/EMA) are NOT present in any data model, prompt template, or output format. The prompt covers trend analysis across timeframes (lines 327-332) and support/resistance levels (lines 334-336), but these are not moving average indicators. The assertion specifically lists moving averages as a required indicator alongside RSI and MACD, and they are missing from the implementation."
+    },
+    {
+      "text": "Risk Agent provides risk scoring and factor analysis",
+      "passed": true,
+      "evidence": "RiskAssessment model (models.py, lines 198-206) defines `risk_score: int = Field(ge=0, le=100, default=50)` and `risk_factors: Dict[str, RiskCategory]` where RiskCategory has `level: RiskLevel` and `factors: List[str]` (lines 181-183). RiskLevel enum (lines 45-49) includes LOW/MEDIUM/HIGH/VERY_HIGH. The prompt (prompts.py, lines 447-465) explicitly requests 'Risk Score: 0-100' and factor analysis across market_risk, company_risk, valuation_risk, and liquidity_risk categories, each with level and contributing factors. The RiskAgent._aggregate_risk_signals() method (risk_agent.py, lines 85-120) collects signals from upstream agents for enhanced risk scoring."
+    },
+    {
+      "text": "Report Agent synthesizes all agent outputs into coherent report",
+      "passed": true,
+      "evidence": "ReportAgent.build_prompt() (report_agent.py, lines 35-44) receives all agent_outputs and risk_assessment from state. The prompt (prompts.py, lines 545-554) iterates over all agent outputs, formatting each with confidence and citations. The prompt instructs synthesis into executive_summary, recommendation, price_target, key_findings (covering sentiment/fundamentals/technicals/risks), risk_reward, and action_items (prompts.py, lines 583-615). ReportAgent._calculate_confidence() (report_agent.py, lines 59-92) computes weighted average of all upstream agent confidences. ReportAgent._extract_citations() (report_agent.py, lines 94-111) aggregates citations from all upstream agents. Fallback output (report_agent.py, lines 128-146) handles missing upstream data gracefully."
+    },
+    {
+      "text": "LangGraph workflow includes parallel execution for independent analysis agents",
+      "passed": true,
+      "evidence": "workflow.py implements explicit fan-out/fan-in topology (lines 338-343): `workflow.add_edge('planner', 'news')`, `workflow.add_edge('planner', 'financial')`, `workflow.add_edge('planner', 'technical')` creates three parallel branches from the planner node. Fan-in edges (lines 345-347) merge all three agents to a 'merge' synchronization node. WorkflowState TypedDict (line 94) defines `parallel_results: Annotated[List[Dict[str, Any]], operator.add]` using operator.add reducer for safe parallel result aggregation. The architecture diagram in the docstring (lines 13-18) explicitly documents the parallel fan-out pattern. The merge_parallel_outputs function (lines 272-293) serves as the synchronization checkpoint."
+    },
+    {
+      "text": "State management uses TypedDict with proper investment-specific fields",
+      "passed": true,
+      "evidence": "WorkflowState (workflow.py, lines 62-106) is defined as `class WorkflowState(TypedDict, total=False)` with investment-specific fields: stock_code, stock_name (identifiers), market_data, news_data, financial_data, price_history (input data), agent_outputs (Dict[str, Any]), parallel_results with Annotated reducer, risk_assessment, final_report (synthesis results), time_horizon, risk_tolerance (user preferences). The comment at line 55 explicitly states 'LangGraph requires a TypedDict (not Pydantic) for the state schema.' Additionally, InvestmentState (models.py, lines 237-277) is a Pydantic model with the same investment-specific fields for validation, and create_initial_state() (models.py, lines 280-315) converts it to a plain dict for LangGraph consumption."
+    },
+    {
+      "text": "All agents produce structured JSON outputs with confidence scores",
+      "passed": true,
+      "evidence": "All agents return AgentOutput (models.py, lines 62-76) which has `result: Dict[str, Any]` and `confidence: float = Field(ge=0.0, le=1.0)`. The base LLMAgent.run() (base_agent.py, lines 309-334) calls parse_response() to extract JSON, _calculate_confidence() for scoring, and _create_output() to build AgentOutput. Each agent has structured output expectations: NewsAgent expects ['sentiment', 'sentiment_score', 'events', 'risk_factors'], FinancialAgent expects ['profitability', 'growth', 'valuation', 'health', 'thesis'], TechnicalAgent expects ['trend', 'levels', 'indicators', 'volume', 'signals'], RiskAgent expects ['overall_risk', 'risk_score', 'risk_factors', 'worst_case', 'mitigation'], ReportAgent expects ['executive_summary', 'recommendation', 'confidence', 'price_target', 'key_findings', 'risk_reward', 'action_items']. Each agent's prompt specifies exact JSON output schema with confidence field. All Pydantic models (NewsAnalysis, FinancialAnalysis, TechnicalAnalysis, RiskAssessment, FinalReport) include a `confidence: float` field."
+    },
+    {
+      "text": "Code includes citation tracking and source attribution for all claims",
+      "passed": true,
+      "evidence": "AgentOutput model (models.py, line 67) defines `citations: List[str] = Field(default_factory=list)`. BaseAgent._extract_citations() (base_agent.py, lines 156-171) collects citations from result['citations'], result['sources'], and state['data_sources'] with deduplication. NewsAgent._extract_citations() (news_agent.py, lines 79-89) adds source names from news_data articles. ReportAgent._extract_citations() (report_agent.py, lines 94-111) aggregates citations from ALL upstream agent outputs into the final report. Each agent's prompt includes a 'citations' field in the JSON output format and instructs source attribution (e.g., prompts.py line 155: '\"citations\": [\"source URL or publication name\"]'). The FinalReport model (models.py, line 229) includes `sources: List[str]`. Every agent output format in prompts.py includes either 'citations' or 'sources' arrays for attribution."
+    }
+  ]
+}

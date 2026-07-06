@@ -1,40 +1,28 @@
-from pathlib import Path
-from pydantic_settings import BaseSettings
-from typing import List
+import os
+from functools import lru_cache
 
-# .env is at project root (AI_Investment_OS/.env), not in backend/
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_ENV_FILE = _PROJECT_ROOT / ".env"
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    model_config = {
-        "env_file": str(_ENV_FILE),
-        "env_file_encoding": "utf-8",
-    }
-
-    app_name: str = "AI Investment OS"
-    debug: bool = False
-
-    database_url: str = "sqlite:///./data/investment.db"
-
+    database_url: str = "sqlite+aiosqlite:///./data/investment.db"
     redis_url: str = "redis://localhost:6379/0"
 
-    # LLM Configuration (OpenAI-compatible interface)
-    # Supports: OpenAI, DeepSeek, Qwen, MiMo, and any OpenAI-compatible provider
     llm_api_key: str = ""
-    llm_base_url: str = "https://api.openai.com/v1"
-    llm_model: str = "gpt-4o-mini"
-    llm_max_tokens: int = 2000
+    llm_base_url: str = "https://api.deepseek.com/v1"
+    llm_model: str = "deepseek-chat"
 
-    cors_origins: List[str] = ["http://localhost:3000"]
-
-    log_level: str = "INFO"
-    log_format: str = "json"
-
-    jwt_secret: str = "change-me-in-production"
+    jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"
-    jwt_expire_hours: int = 24
+    jwt_expire_minutes: int = 1440  # 24h
+
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    class Config:
+        env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+        env_file_encoding = "utf-8"
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

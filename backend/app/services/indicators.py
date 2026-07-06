@@ -1,193 +1,77 @@
-"""Technical indicator calculation service.
-
-Pure computation module — no external API calls, no LLM dependencies.
-All functions accept price lists/arrays and return indicator values.
-"""
-import math
-from typing import List, Dict, Optional
+import numpy as np
+import pandas as pd
 
 
-def _ema(data: List[float], period: int) -> List[float]:
-    """Exponential Moving Average."""
-    if len(data) < period:
-        return []
-    multiplier = 2 / (period + 1)
-    ema_values = [sum(data[:period]) / period]
-    for price in data[period:]:
-        ema_values.append((price - ema_values[-1]) * multiplier + ema_values[-1])
-    return ema_values
+class IndicatorsService:
+    def calculate_all(self, history: list[dict]) -> dict:
+        if not history or len(history) < 20:
+            return {"error": "Insufficient data"}
 
+        closes = pd.Series([h["close"] for h in history])
+        highs = pd.Series([h["high"] for h in history])
+        lows = pd.Series([h["low"] for h in history])
+        volumes = pd.Series([h["volume"] for h in history])
 
-def _sma(data: List[float], period: int) -> List[float]:
-    """Simple Moving Average."""
-    if len(data) < period:
-        return []
-    return [sum(data[i:i + period]) / period for i in range(len(data) - period + 1)]
+        return {
+            "ma5": self._ma(closes, 5),
+            "ma10": self._ma(closes, 10),
+            "ma20": self._ma(closes, 20),
+            "ma60": self._ma(closes, 60) if len(closes) >= 60 else [],
+            "rsi": self._rsi(closes),
+            "macd": self._macd(closes),
+            "bollinger": self._bollinger(closes),
+            "kdj": self._kdj(closes, highs, lows),
+            "volume_ma5": self._ma(volumes, 5),
+        }
 
+    def _ma(self, series: pd.Series, period: int) -> list[float]:
+        return series.rolling(window=period).mean().round(2).tolist()
 
-def calculate_macd(
-    prices: List[float],
-    fast: int = 12,
-    slow: int = 26,
-    signal_period: int = 9,
-) -> Dict[str, float]:
-    """MACD (Moving Average Convergence Divergence)."""
-    if len(prices) < slow + signal_period:
-        return {"macd_line": 0.0, "signal_line": 0.0, "histogram": 0.0}
-
-    fast_ema = _ema(prices, fast)
-    slow_ema = _ema(prices, slow)
-
-    offset = fast - slow
-    macd_line = [f - s for f, s in zip(fast_ema[-len(slow_ema):], slow_ema)]
-
-    signal_line = _ema(macd_line, signal_period)
-    if not signal_line:
-        return {"macd_line": 0.0, "signal_line": 0.0, "histogram": 0.0}
-
-    macd_val = macd_line[-1]
-    signal_val = signal_line[-1]
-
-    return {
-        "macd_line": round(macd_val, 4),
-        "signal_line": round(signal_val, 4),
-        "histogram": round(macd_val - signal_val, 4),
-    }
-
-
-def calculate_rsi(prices: List[float], period: int = 14) -> Dict[str, float]:
-    """RSI (Relative Strength Index)."""
-    if len(prices) < period + 1:
-        return {"value": 50.0, "signal": "neutral"}
-
-    deltas = [prices[i] - prices[i - 1] for i in range(1, len(prices))]
-    gains = [d if d > 0 else 0 for d in deltas]
-    losses = [-d if d < 0 else 0 for d in deltas]
-
-    avg_gain = sum(gains[:period]) / period
-    avg_loss = sum(losses[:period]) / period
-
-    for i in range(period, len(gains)):
-        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-
-    if avg_loss == 0:
-        rsi = 100.0
-    else:
-        rs = avg_gain / avg_loss
+    def _rsi(self, closes: pd.Series, period: int = 14) -> float:
+        delta = closes.diff()
+        gain = delta.where(delta > 0, 0).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        rs = gain / loss.replace(0, np.nan)
         rsi = 100 - (100 / (1 + rs))
+        val = rsi.iloc[-1]
+        return round(float(val), 2) if pd.notna(val) else 50.0
 
-    signal = "neutral"
-    if rsi > 70:
-        signal = "overbought"
-    elif rsi < 30:
-        signal = "oversold"
+    def _macd(self, closes: pd.Series) -> dict:
+        ema12 = closes.ewm(span=12, adjust=False).mean()
+        ema26 = closes.ewm(span=26, adjust=False).mean()
+        dif = ema12 - ema26
+        dea = dif.ewm(span=9, adjust=False).mean()
+        macd_bar = (dif - dea) * 2
+        return {
+            "dif": round(float(dif.iloc[-1]), 4),
+            "dea": round(float(dea.iloc[-1]), 4),
+            "macd": round(float(macd_bar.iloc[-1]), 4),
+            "dif_list": dif.round(4).tolist(),
+            "dea_list": dea.round(4).tolist(),
+            "macd_list": macd_bar.round(4).tolist(),
+        }
 
-    return {"value": round(rsi, 2), "signal": signal}
+    def _bollinger(self, closes: pd.Series, period: int = 20) -> dict:
+        mid = closes.rolling(window=period).mean()
+        std = closes.rolling(window=period).std()
+        return {
+            "upper": round(float((mid + 2 * std).iloc[-1]), 2),
+            "mid": round(float(mid.iloc[-1]), 2),
+            "lower": round(float((mid - 2 * std).iloc[-1]), 2),
+        }
 
-
-def calculate_kdj(
-    highs: List[float],
-    lows: List[float],
-    closes: List[float],
-    period: int = 9,
-) -> Dict[str, float]:
-    """KDJ indicator."""
-    if len(closes) < period or not highs or not lows:
-        return {"k": 50.0, "d": 50.0, "j": 50.0, "signal": "neutral"}
-
-    k_values = []
-    for i in range(period - 1, len(closes)):
-        high_n = max(highs[i - period + 1:i + 1])
-        low_n = min(lows[i - period + 1:i + 1])
-        if high_n == low_n:
-            rsv = 50.0
-        else:
-            rsv = (closes[i] - low_n) / (high_n - low_n) * 100
-        k_values.append(rsv)
-
-    k = 50.0
-    d = 50.0
-    for rsv in k_values:
-        k = 2 / 3 * k + 1 / 3 * rsv
-        d = 2 / 3 * d + 1 / 3 * k
-
-    j = 3 * k - 2 * d
-
-    signal = "neutral"
-    if k > 80 and d > 80:
-        signal = "overbought"
-    elif k < 20 and d < 20:
-        signal = "oversold"
-
-    return {
-        "k": round(k, 2),
-        "d": round(d, 2),
-        "j": round(j, 2),
-        "signal": signal,
-    }
+    def _kdj(self, closes: pd.Series, highs: pd.Series, lows: pd.Series, period: int = 9) -> dict:
+        low_min = lows.rolling(window=period).min()
+        high_max = highs.rolling(window=period).max()
+        rsv = (closes - low_min) / (high_max - low_min).replace(0, np.nan) * 100
+        k = rsv.ewm(com=2, adjust=False).mean()
+        d = k.ewm(com=2, adjust=False).mean()
+        j = 3 * k - 2 * d
+        return {
+            "k": round(float(k.iloc[-1]), 2) if pd.notna(k.iloc[-1]) else 50,
+            "d": round(float(d.iloc[-1]), 2) if pd.notna(d.iloc[-1]) else 50,
+            "j": round(float(j.iloc[-1]), 2) if pd.notna(j.iloc[-1]) else 50,
+        }
 
 
-def calculate_bollinger(
-    prices: List[float],
-    period: int = 20,
-    num_std: float = 2.0,
-) -> Dict[str, float]:
-    """Bollinger Bands."""
-    if len(prices) < period:
-        return {"upper": 0.0, "middle": 0.0, "lower": 0.0, "signal": "neutral"}
-
-    recent = prices[-period:]
-    middle = sum(recent) / period
-    variance = sum((p - middle) ** 2 for p in recent) / period
-    std_dev = math.sqrt(variance)
-
-    upper = middle + num_std * std_dev
-    lower = middle - num_std * std_dev
-    current = prices[-1]
-
-    signal = "neutral"
-    if current > upper:
-        signal = "overbought"
-    elif current < lower:
-        signal = "oversold"
-
-    return {
-        "upper": round(upper, 4),
-        "middle": round(middle, 4),
-        "lower": round(lower, 4),
-        "signal": signal,
-    }
-
-
-def calculate_ma(prices: List[float], periods: List[int] = None) -> Dict[str, float]:
-    """Multiple Moving Averages."""
-    if periods is None:
-        periods = [5, 10, 20, 60]
-    result = {}
-    for p in periods:
-        if len(prices) >= p:
-            result[f"ma{p}"] = round(sum(prices[-p:]) / p, 4)
-        else:
-            result[f"ma{p}"] = 0.0
-    return result
-
-
-def calculate_all_indicators(
-    closes: List[float],
-    highs: Optional[List[float]] = None,
-    lows: Optional[List[float]] = None,
-) -> Dict:
-    """Calculate all technical indicators at once."""
-    if highs is None or not highs:
-        highs = closes
-    if lows is None or not lows:
-        lows = closes
-
-    return {
-        "macd": calculate_macd(closes),
-        "rsi": calculate_rsi(closes),
-        "kdj": calculate_kdj(highs, lows, closes),
-        "bollinger": calculate_bollinger(closes),
-        "ma": calculate_ma(closes),
-    }
+indicators_service = IndicatorsService()

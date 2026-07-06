@@ -1,0 +1,56 @@
+{
+  "eval_id": 1,
+  "run_type": "without_skill",
+  "expectations": [
+    {
+      "text": "Code includes BaseAgent abstract class with standard interface (name, description, run method)",
+      "passed": true,
+      "evidence": "agents.py defines `class BaseAgent(ABC)` (line 65) with `name: str = \"base_agent\"` attribute (line 75), `__init__` accepting an llm_client (line 77), and `__call__` serving as the LangGraph node entry point equivalent to a run method (line 93). Abstract methods `_build_prompt` and `_process` are enforced via @abstractmethod. The `description` attribute is not explicitly present as a class field, but each subclass has a descriptive docstring. The core interface pattern (name + callable entry point + abstract hooks) is solid and sufficient for LangGraph node integration. Minor gap: no explicit `description` field."
+    },
+    {
+      "text": "System defines at least 4 specialized agents (Classifier, Technical, Billing, General, Response)",
+      "passed": true,
+      "evidence": "agents.py defines exactly 5 specialized agents, all subclassing BaseAgent: ClassifierAgent (line 168, name='classifier_agent'), TechnicalAgent (line 260, name='technical_agent'), BillingAgent (line 333, name='billing_agent'), GeneralAgent (line 403, name='general_agent'), and ResponseAgent (line 474, name='response_agent'). Each has its own _build_prompt and _process implementation with distinct responsibilities."
+    },
+    {
+      "text": "State management uses TypedDict or Pydantic with proper type hints",
+      "passed": true,
+      "evidence": "state.py uses TypedDict from typing_extensions extensively: AgentDecision (line 50), TicketInput (line 59), ClassificationResult (line 69), AgentResponse (line 79), FinalResponse (line 90), and the main SupportTicketState (line 100). All fields have explicit type annotations (str, float, list[str], bool, Optional, etc.). Also uses str Enum classes for UrgencyLevel, TopicCategory, and TicketStatus. Dataclass Ticket (line 147) is used for construction with field defaults. Type hints are comprehensive throughout all modules."
+    },
+    {
+      "text": "LangGraph workflow is properly defined with StateGraph and nodes",
+      "passed": true,
+      "evidence": "workflow.py imports StateGraph and END from langgraph.graph (line 51), creates `workflow = StateGraph(SupportTicketState)` (line 112), and registers 9 nodes: receive_ticket, classify, route, technical_agent, billing_agent, general_agent, merge_responses, generate_response, complete, and handle_error (lines 115-134). Uses set_entry_point (line 137), add_edge for linear connections, and add_conditional_edges for branching (lines 142-161). The graph is compiled with `.compile()` (line 178) and executed via `.invoke()` (line 354) and `.ainvoke()` (line 375)."
+    },
+    {
+      "text": "Prompts follow structured format with ROLE, CONTEXT, TASK, and OUTPUT FORMAT sections",
+      "passed": true,
+      "evidence": "prompts.py defines structured prompts for each agent. ROLE: System prompts define the agent persona (e.g., 'You are an expert customer support ticket classifier' line 25, 'You are a senior technical support engineer' line 76, 'You are a billing support specialist' line 124). CONTEXT: User prompts include '## Ticket Information' sections with ticket fields (lines 48-55). TASK: Clear task instructions in system prompts with 'Your responsibilities' and numbered 'Rules' (lines 31-43). OUTPUT FORMAT: All user prompts include '## Required Output (JSON only, no other text)' sections with explicit JSON schema templates (e.g., lines 57-68). The format is well-structured though uses slightly different section headers (e.g., '## Ticket Information' instead of 'CONTEXT')."
+    },
+    {
+      "text": "Workflow includes parallel execution paths for independent agents",
+      "passed": false,
+      "evidence": "While the code has infrastructure suggesting parallel execution (the graph diagram in workflow.py docstring shows fan-out at lines 22-25, and there is a `requires_parallel_processing` flag set in _route at line 223), the actual _route_decision method (line 231) only returns a SINGLE agent name (e.g., 'technical_agent' or 'billing_agent'), not multiple. The conditional edges at lines 152-161 map to individual agents but the routing function picks only one. All three specialist edges go to merge_responses (lines 164-166), but only the routed agent is ever executed. The code comments explicitly acknowledge this limitation: 'for simplicity and clarity we route to the primary agent' (lines 239-243) and suggests using 'LangGraph Send API for true parallel fan-out' (lines 241-242). This is sequential routing, not parallel execution."
+    },
+    {
+      "text": "Error handling is implemented with try-catch blocks and fallback mechanisms",
+      "passed": true,
+      "evidence": "Comprehensive error handling throughout: (1) error_handling.py defines custom exceptions: SupportSystemError, LLMCallError, ParsingError, RoutingError, CircuitBreakerOpen, MaxRetriesExceeded (lines 30-57). (2) retry_with_backoff decorator with exponential backoff (lines 67-126), applied to _call_llm in BaseAgent (line 128). (3) CircuitBreaker class with CLOSED/OPEN/HALF_OPEN states (lines 133-199). (4) safe_node_wrapper catches all exceptions in workflow nodes and records errors to state instead of crashing (lines 230-271). (5) Every agent's _process method has try-except blocks catching ValidationError and KeyError with safe defaults (e.g., ClassifierAgent lines 183-207, TechnicalAgent lines 276-294). (6) ResponseAgent has a fallback that generates a response even on aggregator error (lines 513-523). (7) BaseAgent._call_llm raises LLMCallError on failure with logging (lines 146-148). (8) _handle_error node produces a customer-facing fallback response (lines 318-336)."
+    },
+    {
+      "text": "Output validation is present using Pydantic validators or similar",
+      "passed": true,
+      "evidence": "parsers.py provides explicit validation equivalent to Pydantic validators but without the Pydantic dependency (as noted in the design choice at lines 10-15). Custom ValidationError class (line 38). Helper functions: _check_required_fields (line 92) raises on missing keys, _check_enum (line 102) validates values against allowed sets, _check_float_range (line 111) validates numeric bounds. parse_classification (line 197) validates urgency against UrgencyLevel enum, topic against TopicCategory, sentiment against ['positive','neutral','negative'], confidence in [0.0, 1.0], and keywords as list. parse_agent_response (line 231) validates agent_name matches expected, confidence range. parse_final_response (line 270) validates resolution_status against ['resolved','pending','escalated']. JSON extraction handles markdown fences, bare JSON, and whole-string parsing (lines 47-85). Dataclass containers (ParsedClassification, ParsedAgentResponse, ParsedFinalResponse) provide typed conversion to TypedDicts."
+    },
+    {
+      "text": "Code is production-ready with logging, proper imports, and clear documentation",
+      "passed": true,
+      "evidence": "Logging: logging.getLogger(__name__) used in agents.py (line 57), workflow.py (line 70), state_manager.py (line 31), error_handling.py (line 23). Structured log format configured in main.py with timestamps, module names, and levels (lines 42-46). Info-level logging for ticket lifecycle events, error-level for failures. Imports: from __future__ import annotations in every module, proper third-party imports (langgraph, typing_extensions), requirements.txt with pinned versions (lines 1-14). Documentation: Comprehensive module-level docstrings explaining purpose and architecture (e.g., agents.py lines 1-17, workflow.py lines 1-41), class docstrings on every public class, method docstrings with parameter descriptions using NumPy-style (e.g., retry_with_backoff lines 75-89, _call_llm lines 129-133). Mermaid diagram for workflow visualization (lines 390-407). test_system.py with 23 tests covering state, parsers, agents, error handling, state management, and end-to-end workflows."
+    },
+    {
+      "text": "Agent outputs include confidence scores and citations/sources",
+      "passed": false,
+      "evidence": "Confidence scores ARE present: AgentResponse TypedDict includes `confidence: float` (state.py line 87), ClassificationResult includes `confidence: float` (line 75). All agent deterministic fallbacks return confidence values (ClassifierAgent returns 0.75, TechnicalAgent returns 0.70, BillingAgent returns 0.75, GeneralAgent returns 0.80). parse_agent_response validates confidence in [0.0, 1.0] (parsers.py line 257). However, citations/sources are NOT present anywhere in the output schemas. AgentResponse has no 'citations' or 'sources' field. ClassificationResult has no references field. FinalResponse has no citations field. The deterministic fallback responses do not include any references to documentation URLs, knowledge base articles, or source materials. AgentDecision records decision reasoning but no source citations. This is a partial match only - confidence scores pass but citations/sources are entirely missing."
+    }
+  ]
+}

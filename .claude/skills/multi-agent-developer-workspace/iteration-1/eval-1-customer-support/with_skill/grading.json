@@ -1,0 +1,56 @@
+{
+  "eval_id": 1,
+  "run_type": "with_skill",
+  "expectations": [
+    {
+      "text": "Code includes BaseAgent abstract class with standard interface (name, description, run method)",
+      "passed": true,
+      "evidence": "In base.py, BaseAgent is defined as an ABC (abstract class) at line 97. It declares `name: str` (line 112), `description: str` (line 113), and `@abstractmethod run(self, state: dict[str, Any]) -> dict[str, Any]` (lines 120-137). It also provides helper methods build_prompt, parse_response, _create_output, _format_context, and call_llm. All five specialized agents (ClassifierAgent, TechnicalAgent, BillingAgent, GeneralAgent, ResponseAgent) inherit from BaseAgent and implement the required interface."
+    },
+    {
+      "text": "System defines at least 4 specialized agents (Classifier, Technical, Billing, General, Response)",
+      "passed": true,
+      "evidence": "Five specialized agents are defined in agents.py: ClassifierAgent (line 55), TechnicalAgent (line 184), BillingAgent (line 291), GeneralAgent (line 395), and ResponseAgent (line 497). Each has unique name, description, build_prompt, run method, and stub/fallback implementations. All five are instantiated in workflow.py (lines 52-56) and registered as LangGraph nodes."
+    },
+    {
+      "text": "State management uses TypedDict or Pydantic with proper type hints",
+      "passed": true,
+      "evidence": "State management uses TypedDict extensively in state.py: SupportTicketState (line 86), ClassificationResult (line 55), AgentResponse (line 63), FinalResponse (line 73). The SupportTicketState uses `Annotated[list[AgentResponse], operator.add]` for parallel-safe fields (lines 113, 122). Enums (TicketStatus, Urgency, Topic) constrain vocabulary. Pydantic BaseModel is used in base.py for AgentOutput (line 50) with Field descriptors and validators. Type hints are present throughout all modules."
+    },
+    {
+      "text": "LangGraph workflow is properly defined with StateGraph and nodes",
+      "passed": true,
+      "evidence": "In workflow.py, `workflow = StateGraph(SupportTicketState)` (line 190). Six nodes are registered: classifier_agent, technical_agent, billing_agent, general_agent, response_agent, and escalation (lines 193-198). Entry point is set to classifier_agent (line 201). Conditional edges route from classifier to specialists (lines 204-212) and from specialists to escalation check (lines 216-239). Terminal edges to END from response_agent and escalation (lines 242-243). The graph is compiled with `workflow.compile()` (line 246)."
+    },
+    {
+      "text": "Prompts follow structured format with ROLE, CONTEXT, TASK, and OUTPUT FORMAT sections",
+      "passed": false,
+      "evidence": "The BaseAgent.build_prompt method in base.py (lines 148-163) defines a template with [ROLE], [CONTEXT], [TASK], [OUTPUT FORMAT], and [CONSTRAINTS] sections. However, ALL five specialized agents override build_prompt to use their own prompt builder functions from prompts.py, which produce prompts with only [CONTEXT], [TASK], [OUTPUT FORMAT], [CONSTRAINTS], and [EXAMPLES] sections -- missing the explicit [ROLE] header. The role information is provided via a separate system prompt string, but the user-facing task prompt does not include the [ROLE] section. The base class template is never actually used by any agent."
+    },
+    {
+      "text": "Workflow includes parallel execution paths for independent agents",
+      "passed": false,
+      "evidence": "The workflow uses conditional routing (add_conditional_edges) to select exactly ONE specialist agent per ticket based on topic classification (workflow.py lines 204-212: _route_by_topic maps topic to a single agent). The three specialist agents (technical, billing, general) never run in parallel -- only the relevant one executes. While the state uses `Annotated[list[AgentResponse], operator.add]` which is the LangGraph pattern for parallel-safe list merging (state.py line 113), the actual graph structure does not implement any parallel branches. This is sequential conditional routing, not parallel execution."
+    },
+    {
+      "text": "Error handling is implemented with try-catch blocks and fallback mechanisms",
+      "passed": true,
+      "evidence": "Comprehensive error handling at multiple levels: (1) Each agent has try/except blocks with specific fallback methods -- ClassifierAgent._stub_classification, TechnicalAgent._fallback, BillingAgent._fallback, GeneralAgent._fallback, ResponseAgent._fallback (agents.py throughout). (2) Dedicated error_handling.py module provides safe_node wrapper (lines 26-71) that catches all exceptions and returns fallback values, retry_with_backoff (lines 78-130), CircuitBreaker class (lines 137-209), and merge_errors helper (lines 216-228). (3) Every workflow node is wrapped with safe_node (workflow.py lines 93-127). (4) BaseAgent.call_llm has retry with exponential backoff (base.py lines 250-278)."
+    },
+    {
+      "text": "Output validation is present using Pydantic validators or similar",
+      "passed": true,
+      "evidence": "Pydantic validation in base.py: AgentOutput model (line 50) uses Field descriptors with `ge=0.0, le=1.0` constraint on confidence (line 72). @validator decorators: _check_confidence validates range (lines 78-82), _warn_empty_citations warns on empty citations (lines 84-89). Enum constraints (TicketStatus, Urgency, Topic in state.py) restrict valid values. Manual validation in ClassifierAgent.run checks urgency/topic against enum values (agents.py lines 101-104). Tests in tests.py verify validation behavior (TestAgentOutput class lines 249-276, including confidence_out_of_range test)."
+    },
+    {
+      "text": "Code is production-ready with logging, proper imports, and clear documentation",
+      "passed": true,
+      "evidence": "Logging: `logging.getLogger(__name__)` used in every module (base.py, agents.py, workflow.py, error_handling.py, state_manager.py, main.py). main.py configures logging.basicConfig with format and datefmt (lines 35-39). Proper imports: all modules use explicit imports with `from __future__ import annotations`. Documentation: every module has a docstring header, every class has docstrings, every public method has docstrings with Parameters/Returns sections (e.g., BaseAgent in base.py, StateManager in state_manager.py, CircuitBreaker in error_handling.py). requirements.txt specifies dependencies. Full test suite in tests.py with pytest. Main entry point in main.py with demo tickets."
+    },
+    {
+      "text": "Agent outputs include confidence scores and citations/sources",
+      "passed": true,
+      "evidence": "The AgentOutput model in base.py defines `confidence: float` (line 72) and `citations: list[str]` (line 73) as standard fields. Every agent stub returns confidence scores (0.2-0.7) and citations (URLs like 'https://docs.example.com/troubleshooting', 'https://billing.example.com/refund-policy', 'https://help.example.com'). ClassificationResult TypedDict includes `confidence: float` (state.py line 60). The AgentResponse TypedDict includes `confidence: float` and `citations: list[str]` (state.py lines 69-70). LLM-parsed responses extract confidence and citations from JSON output (e.g., agents.py lines 219-220 for TechnicalAgent). Tests verify confidence field presence (tests.py lines 161, 181)."
+    }
+  ]
+}

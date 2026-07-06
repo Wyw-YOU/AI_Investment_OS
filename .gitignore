@@ -1,45 +1,21 @@
-# Environment
-.env
-.env.local
-.env.production
-
-# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 build/
+.eggs/
 *.egg
+.env
+data/*.db
 .venv/
 venv/
-data/
-*.db
-
-# Node
 node_modules/
 .next/
 out/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
+.vercel
+*.tsbuildinfo
 .DS_Store
-Thumbs.db
-
-# Docker
-compose.override.yml
-docker-compose.override.yml
-
-# Test
+*.log
+.mypy_cache/
 .pytest_cache/
-htmlcov/
-.coverage
-test.db
-
-# Claude Code workspace
-*-workspace/
-feedback.json
+.ruff_cache/

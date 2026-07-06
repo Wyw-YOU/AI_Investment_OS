@@ -1,18 +1,15 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "AI Investment OS",
-  description: "AI-driven financial analysis and portfolio management",
+  description: "Multi-Agent Investment Research Operating System",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
-      <body className="min-h-screen antialiased">
-        <Providers>{children}</Providers>
-      </body>
+    <html lang="zh-CN">
+      <body className="min-h-screen">{children}</body>
     </html>
   );
 }

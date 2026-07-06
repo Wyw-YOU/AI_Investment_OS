@@ -1,0 +1,56 @@
+{
+  "eval_id": 2,
+  "run_type": "with_skill",
+  "expectations": [
+    {
+      "text": "System includes at least 5 specialized agents (Extractor, Quality, Summary, Gap, Literature Review)",
+      "passed": true,
+      "evidence": "All 5 specialized agents are implemented as separate classes extending LLMAgent: PaperExtractorAgent (agents/paper_extractor.py), QualityAnalyzerAgent (agents/quality_analyzer.py), SummaryGeneratorAgent (agents/summary_generator.py), GapAnalyzerAgent (agents/gap_analyzer.py), LiteratureReviewAgent (agents/literature_review.py). Each has unique name, description, system prompt, task description, output format, and constraints. Registered in agents/__init__.py with __all__ exports."
+    },
+    {
+      "text": "Prompts contain domain-specific academic terminology and analysis frameworks",
+      "passed": true,
+      "evidence": "Each agent contains extensive domain-specific academic terminology and analysis frameworks: PaperExtractorAgent references 'primary vs secondary findings', 'statistical significance', 'methodology classification' with enums like EXPERIMENTAL/THEORETICAL/COMPUTATIONAL/META_ANALYSIS etc. QualityAnalyzerAgent uses a weighted 6-dimension scoring framework (Methodological Rigor 25%, Novelty/Originality 20%, Significance/Impact 20%, Clarity/Presentation 15%, Reproducibility 10%, Literature Coverage 10%) with peer review terminology ('accept/minor_revisions/major_revisions/reject'). GapAnalyzerAgent identifies 5 gap dimensions (methodological, theoretical, empirical, application, scale) and requires evidence-based analysis. LiteratureReviewAgent follows academic survey conventions with thematic organisation, synthesis, and bibliography. All use the CRAFT prompt engineering framework (Context, Role, Action, Format, Tone)."
+    },
+    {
+      "text": "Paper extraction agent outputs structured data (title, authors, abstract, methodology, findings)",
+      "passed": true,
+      "evidence": "PaperExtractorAgent._get_output_format() specifies JSON with 'metadata' object containing: title, authors (list), abstract, publication_year, journal_or_venue, doi, keywords, research_field, methodology, citation_count, references_count; AND 'findings' object containing: primary_findings (list), secondary_findings (list), statistical_significance, key_contributions (list), limitations (list). The models.py defines PaperMetadata (lines 86-111) and KeyFindings (lines 114-137) Pydantic models that validate this structured data. Methods to_paper_metadata() and to_key_findings() convert raw dicts to validated models."
+    },
+    {
+      "text": "Quality analysis includes metrics for research rigor, novelty, and significance",
+      "passed": true,
+      "evidence": "QualityAnalyzerAgent evaluates 6 explicit quality dimensions including Methodological Rigor (weight 25%), Novelty/Originality (weight 20%), and Significance/Impact (weight 20%). The output format includes dedicated score fields: novelty_score, rigor_score, impact_score (each 0-10 scale). The QualityAssessment model in models.py (lines 151-185) defines these as validated fields: novelty_score (ge=0.0, le=10.0), rigor_score (ge=0.0, le=10.0), impact_score (ge=0.0, le=10.0). Individual QualityDimension objects provide per-dimension scores with justifications."
+    },
+    {
+      "text": "Workflow supports parallel paper processing",
+      "passed": true,
+      "evidence": "The workflow in workflow.py explicitly implements parallel processing using LangGraph's StateGraph with fan-out/fan-in pattern. Lines 267-270 show: workflow.add_edge('extraction', 'quality_analysis') and workflow.add_edge('extraction', 'summary_generation') creating a fan-out from extraction to TWO parallel nodes. Lines 273-274 show both fan back into gap_analysis via add_edge calls. The WorkflowState TypedDict uses Annotated[list, operator.add] (lines 76-78) for extraction_results, quality_results, and summary_results to support concurrent result collection. The docstring and comments explicitly state 'quality_analysis and summary_generation run in PARALLEL (fan-out/fan-in)'. The Mermaid diagram (lines 443-465) visually confirms the parallel branches."
+    },
+    {
+      "text": "State management tracks paper corpus with metadata",
+      "passed": true,
+      "evidence": "AcademicResearchState in models.py (lines 316-400) tracks the full paper corpus with: paper_texts (list[str]), paper_filenames (list[str]), paper_metadata (list[PaperMetadata]), quality_assessments (list[QualityAssessment]), paper_summaries (list[PaperSummary]), gap_analysis (Optional[GapAnalysisResult]), literature_review (Optional[LiteratureReview]), agent_outputs (dict[str, AgentOutput]). AcademicResearchStateManager in state_manager.py provides typed attachment methods (attach_extraction_results, attach_quality_assessments, attach_summaries, attach_gap_analysis, attach_literature_review) with immutable state transitions via .copy(update=...). FileStatePersistence (lines 43-89) persists state as timestamped JSON files. EpisodicMemory (lines 95-129) tracks analysis history across sessions. State transitions are validated against a defined transition map (_VALID_TRANSITIONS, lines 210-234)."
+    },
+    {
+      "text": "Gap analysis identifies research opportunities and future directions",
+      "passed": true,
+      "evidence": "GapAnalyzerAgent._get_task_description() (lines 63-98) explicitly asks for: (1) Research Gaps across 5 dimensions (methodological, theoretical, empirical, application, scale) with gap_description, significance, suggested_approach, related_papers, and priority; (2) Emerging Themes with trajectory rating; (3) Future Research Directions (5-8 specific, actionable proposals with suggested methodology and expected challenges); (4) Cross-Paper Gaps identifying contradictions and inconsistencies. The GapAnalysisResult model (models.py lines 208-223) structures this with research_gaps (list[ResearchGap]), emerging_themes, future_directions, and cross_paper_gaps. ResearchGap model (lines 187-205) includes significance and suggested_approach fields. to_gap_analysis_result() method converts raw dicts to validated models."
+    },
+    {
+      "text": "Literature review synthesis combines multiple papers coherently",
+      "passed": true,
+      "evidence": "LiteratureReviewAgent produces structured reviews with: thematic_sections (3-5 sections organized by theme, not paper-by-paper), each section required to 'synthesize findings from multiple papers' and 'identify agreements and disagreements between papers'. The _get_constraints() method (lines 149-165) enforces: 'The review MUST synthesise across papers, not just summarize them one by one. Each thematic section should reference at least 2-3 papers.' The LiteratureReview model (models.py lines 250-265) includes introduction, thematic_sections (list of dicts with title and body), synthesis (cross-paper analysis paragraph), conclusion, bibliography, and total_papers_reviewed. The build_prompt() method (lines 198-296) injects context from ALL prior agents (extraction metadata, quality assessments, summaries, gap analysis) to enable coherent synthesis. The _get_task_description() mandates 'Organise by THEME, not by paper'."
+    },
+    {
+      "text": "Code includes proper citation tracking and source attribution",
+      "passed": true,
+      "evidence": "Citation tracking is implemented at multiple levels: (1) AgentOutput model (models.py lines 272-309) includes a mandatory 'citations' field with a validator that warns if empty. (2) BaseAgent._extract_citations() (base_agent.py lines 310-318) extracts citations from 'citations', 'sources', 'references' keys and includes paper_filenames, with deduplication. (3) PaperExtractorAgent._collect_citations() gathers DOIs and titles from extracted metadata. (4) LiteratureReviewAgent output includes inline citations like '(Author et al., Year)' in thematic sections and a structured bibliography with authors, year, title, venue, and doi fields. (5) Each agent's _get_constraints() requires citation of sources. (6) Literature review constraints enforce 'Every claim MUST be supported by a citation to a specific paper in the corpus. Use inline citations like (Author et al., Year).' (7) Bibliography entries are required to use actual paper metadata."
+    },
+    {
+      "text": "Implementation is production-ready with comprehensive error handling",
+      "passed": true,
+      "evidence": "Comprehensive error handling is implemented throughout: (1) Custom exception hierarchy in base_agent.py: AgentExecutionError, AgentTimeoutError, AgentValidationError (lines 28-49). (2) LLM calls use exponential backoff with 3 retries (base_agent.py lines 246-278). (3) safe_agent_run() wrapper in workflow.py (lines 93-115) catches all exceptions and returns fallback results with error messages. (4) Workflow.execute() in workflow.py wraps the entire LangGraph invoke in try/except (lines 383-390). (5) State transitions are validated against a defined transition map with ValueError on invalid transitions (state_manager.py lines 236-265). (6) Pydantic models enforce validation: confidence bounded [0,1], quality scores bounded [0,10], year validation warns on unusual values. (7) Paper text truncation at 50K/40K chars to fit context windows (paper_extractor.py line 215, quality_analyzer.py line 261). (8) Logging throughout with structured format (main.py line 48). (9) CLI with argparse, proper file existence checks, and structured JSON output option. (10) State persistence with FileStatePersistence for auditability and recovery. (11) EpisodicMemory for session tracking. (12) Lazy client initialization with import error handling (base_agent.py lines 200-209)."
+    }
+  ]
+}

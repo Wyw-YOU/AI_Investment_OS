@@ -1,42 +1,37 @@
-"""PlannerAgent — plans analysis tasks and scheduling strategy."""
-import logging
-from typing import Any, Dict
-
-from app.agents.base import BaseAgent, register_agent
-from app.agents.state import InvestmentState
-
-logger = logging.getLogger(__name__)
+from app.agents.base import BaseAgent
+from app.agents.models import AgentOutput
 
 
 class PlannerAgent(BaseAgent):
     name = "planner"
+    description = "a task planning agent that organizes the analysis workflow"
 
-    def run(self, state: InvestmentState) -> Dict[str, Any]:
-        stock = state.current_stock
-        if not stock:
-            return self._build_result(
-                output={"error": "no stock specified", "tasks": []},
-                confidence=0.0,
-                evidence=["current_stock is empty"],
-                reasoning="No stock code provided for analysis.",
-            )
+    def run(self, state: dict) -> AgentOutput:
+        stock_code = state.get("stock_code", "")
+        has_news = bool(state.get("news_data"))
+        has_financial = bool(state.get("financial_data"))
+        has_history = bool(state.get("price_history"))
 
-        tasks = [
-            {"agent": "finance", "priority": "high", "task": "fundamental analysis"},
-            {"agent": "technical", "priority": "high", "task": "technical indicator analysis"},
-            {"agent": "news", "priority": "medium", "task": "news sentiment analysis"},
-            {"agent": "risk", "priority": "medium", "task": "risk assessment"},
-        ]
+        tasks = []
+        if has_news:
+            tasks.append({"agent": "news", "priority": "high", "reason": "Sentiment analysis"})
+        if has_financial:
+            tasks.append({"agent": "financial", "priority": "high", "reason": "Fundamental analysis"})
+        if has_history:
+            tasks.append({"agent": "technical", "priority": "high", "reason": "Technical analysis"})
+        tasks.append({"agent": "macro", "priority": "medium", "reason": "Macro environment"})
 
-        result = self._build_result(
-            output={"stock": stock, "tasks": tasks, "parallel": True},
-            confidence=0.9,
-            evidence=[f"Stock code {stock} validated", f"Planned {len(tasks)} analysis tasks"],
-            reasoning=f"Standard multi-agent analysis pipeline for {stock}: "
-                      f"finance, technical, news, risk in parallel, then judge, portfolio, report.",
+        return AgentOutput(
+            agent_name=self.name,
+            result={
+                "tasks": tasks,
+                "parallel_agents": ["news", "financial", "technical", "macro"],
+                "sequential_agents": ["risk", "quant", "report"],
+                "total_steps": len(tasks) + 3,
+            },
+            confidence=1.0,
+            citations=[f"Planned analysis for {stock_code}"],
         )
-        self._log_run(state, result)
-        return result
 
-
-register_agent(PlannerAgent())
+    def _get_expected_output_keys(self) -> list[str]:
+        return ["tasks", "parallel_agents"]

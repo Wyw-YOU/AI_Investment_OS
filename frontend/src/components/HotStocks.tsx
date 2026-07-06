@@ -1,35 +1,38 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchHotStocks, HotStock } from "@/lib/api";
+import useSWR from "swr";
+import { fetchHotStocks } from "@/lib/api";
+import type { ApiResponse, StockRealtime } from "@/lib/types";
 
 export default function HotStocks() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["hot-stocks"],
-    queryFn: fetchHotStocks,
-  });
+  const { data, error, isLoading } = useSWR<ApiResponse<StockRealtime[]>>("/api/stocks/hot", fetchHotStocks);
 
-  if (isLoading) return <div className="animate-pulse h-40 bg-gray-100 dark:bg-gray-800 rounded" />;
+  if (isLoading) return <div className="text-slate-500 text-sm">加载中...</div>;
+  if (error || !data?.data) return <div className="text-slate-500 text-sm">暂无数据</div>;
 
-  const stocks = data?.stocks ?? [];
+  const stocks = data.data.slice(0, 10);
 
   return (
-    <div className="border rounded-lg p-4 dark:border-gray-800">
-      <h2 className="font-semibold mb-3">热门股票</h2>
-      {stocks.length === 0 ? (
-        <p className="text-sm text-gray-500">暂无数据，请先启动后端服务。</p>
-      ) : (
-        <div className="space-y-2">
-          {stocks.map((s: HotStock) => (
-            <div key={s.stock_code} className="flex justify-between text-sm">
-              <span>{s.name} ({s.stock_code})</span>
-              <span className={s.change_pct >= 0 ? "text-red-600" : "text-green-600"}>
-                {s.change_pct >= 0 ? "+" : ""}{s.change_pct?.toFixed(2)}%
-              </span>
+    <div className="bg-slate-800/50 rounded-xl p-4">
+      <h3 className="text-sm font-medium text-slate-300 mb-3">  热门股票</h3>
+      <div className="space-y-2">
+        {stocks.map((stock) => (
+          <a
+            key={stock.code}
+            href={`/stock/${stock.code}`}
+            className="flex items-center justify-between py-1.5 px-2 hover:bg-slate-700/50 rounded text-sm"
+          >
+            <div>
+              <span className="text-white">{stock.name}</span>
+              <span className="text-slate-500 ml-2 text-xs">{stock.code}</span>
             </div>
-          ))}
-        </div>
-      )}
+            <span className={stock.change_pct >= 0 ? "text-red-400" : "text-green-400"}>
+              {stock.change_pct >= 0 ? "+" : ""}
+              {stock.change_pct?.toFixed(2)}%
+            </span>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }

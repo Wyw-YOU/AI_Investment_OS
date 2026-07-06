@@ -1,42 +1,20 @@
-# Core
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-sqlalchemy>=2.0.0
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
-
-# Data & Cache
-redis>=5.0.0
-
-# AI / LLM
-langchain>=0.1.0
-langgraph>=0.2.0
-openai>=1.0.0
-
-# Market Data
-akshare>=1.12.0
-
-# Vector Store
-faiss-cpu>=1.7.4
-sentence-transformers>=2.2.0
-
-# Auth
-python-jose[cryptography]>=3.3.0
-bcrypt>=4.0.0
-
-# Logging
-structlog>=23.2.0
-
-# HTTP
-httpx>=0.25.0
-
-# Env
-python-dotenv>=1.0.0
-
-# Dev
-pytest>=7.4.0
-pytest-asyncio>=0.23.0
-pytest-cov>=4.1.0
-fakeredis>=2.20.0
-ruff>=0.1.0
-pre-commit>=3.6.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+sqlalchemy[asyncio]>=2.0
+aiosqlite>=0.19.0
+pydantic>=2.0
+pydantic-settings>=2.0
+python-jose[cryptography]>=3.3
+passlib[bcrypt]>=1.7
+python-multipart>=0.0.6
+redis>=5.0
+httpx>=0.26
+langgraph>=0.2
+openai>=1.10
+akshare>=1.12
+pandas>=2.0
+numpy>=1.24
+ta>=0.10
+structlog>=24.0
+pytest>=8.0
+pytest-asyncio>=0.23

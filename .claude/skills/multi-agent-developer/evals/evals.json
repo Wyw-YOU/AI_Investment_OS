@@ -1,0 +1,23 @@
+{
+  "skill_name": "multi-agent-developer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Design and implement a multi-agent system for automated customer support. The system should handle incoming support tickets, classify them by urgency and topic, route to specialized agents (technical support, billing, general inquiries), and generate responses. Include LangGraph workflow orchestration, structured prompts for each agent, and state management for tracking ticket status. Provide complete Python code implementation.",
+      "expected_output": "Complete Python implementation including: 1) Agent class definitions (ClassifierAgent, TechnicalAgent, BillingAgent, GeneralAgent, ResponseAgent) 2) State schema with TypedDict 3) LangGraph workflow with parallel agent execution 4) Structured prompts for each agent 5) Output parsing and validation 6) State management system 7) Error handling patterns",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Build a multi-agent research system for analyzing and summarizing academic papers. The system should: 1) Extract key information (title, authors, abstract, methodology, findings) 2) Analyze research quality and novelty 3) Generate literature review summaries 4) Identify research gaps and future directions. Include complete agent implementations with specialized prompts, workflow orchestration, and state management. Focus on making the prompts domain-specific and effective for academic analysis.",
+      "expected_output": "Complete implementation with: 1) PaperExtractorAgent - extracts structured data from papers 2) QualityAnalyzerAgent - assesses research rigor and novelty 3) SummaryGeneratorAgent - creates concise summaries 4) GapAnalyzerAgent - identifies research opportunities 5) LiteratureReviewAgent - synthesizes multiple papers 6) LangGraph workflow for parallel paper processing 7) Well-designed prompts for each agent with academic domain knowledge 8) State management for tracking paper corpus",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Design a multi-agent investment analysis system similar to AI Investment OS. The system should analyze stocks using multiple specialized agents: News Agent (sentiment analysis), Financial Agent (fundamental analysis), Technical Agent (chart patterns and indicators), Risk Agent (risk assessment), and Report Agent (synthesis). Implement the complete workflow with LangGraph, including: parallel agent execution, structured prompts for financial analysis, state management for tracking analysis progress, and output validation. Provide production-ready code with error handling.",
+      "expected_output": "Complete investment analysis system with: 1) NewsAgent with sentiment analysis prompts 2) FinancialAgent with fundamental analysis prompts 3) TechnicalAgent with technical indicator analysis 4) RiskAgent with risk scoring 5) ReportAgent for synthesis 6) LangGraph workflow with parallel execution 7) InvestmentState management 8) Structured JSON output formats 9) Error handling and fallback patterns 10) Confidence scoring and citation tracking",
+      "files": []
+    }
+  ]
+}

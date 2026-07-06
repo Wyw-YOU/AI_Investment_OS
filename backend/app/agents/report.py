@@ -1,68 +1,31 @@
-"""ReportAgent — generates final structured analysis report."""
-import logging
-from typing import Any, Dict
-from datetime import datetime, timezone
-
-from app.agents.base import BaseAgent, register_agent
-from app.agents.state import InvestmentState
-
-logger = logging.getLogger(__name__)
+from app.agents.base import LLMAgent
+from app.agents.models import AgentOutput
+from app.agents.prompts import build_report_prompt
 
 
-class ReportAgent(BaseAgent):
+class ReportAgent(LLMAgent):
     name = "report"
+    description = "the chief investment strategist producing the final investment report"
 
-    def run(self, state: InvestmentState) -> Dict[str, Any]:
-        stock = state.current_stock
-        outputs = state.agent_outputs
-        judge = outputs.get("judge", {})
-        portfolio = outputs.get("portfolio", {})
-
-        if not judge:
-            return self._build_result(
-                output={"error": "no judge output", "stock": stock},
-                confidence=0.0,
-                evidence=["no judge output"],
-                reasoning="Cannot generate report without judge verdict.",
-            )
-
-        report = {
-            "stock": stock,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "overall_score": judge.get("overall_score", 0),
-            "verdict": judge.get("verdict", "hold"),
-            "summary": judge.get("summary", ""),
-            "key_points": judge.get("key_points", []),
-            "warnings": judge.get("warnings", []),
-            "portfolio_action": portfolio.get("action", "hold"),
-            "suggested_weight": portfolio.get("suggested_weight", 0),
-            "agent_details": {
-                "finance": self._summarize_agent(outputs.get("finance", {})),
-                "technical": self._summarize_agent(outputs.get("technical", {})),
-                "news": self._summarize_agent(outputs.get("news", {})),
-                "risk": self._summarize_agent(outputs.get("risk", {})),
-            },
-            "agents_used": list(outputs.keys()),
-        }
-
-        result = self._build_result(
-            output=report,
-            confidence=judge.get("confidence", 0.5),
-            evidence=[f"Generated report with {len(outputs)} agent outputs"],
-            reasoning=f"Final report for {stock}: score={report['overall_score']}, "
-                      f"verdict={report['verdict']}.",
+    def build_prompt(self, state: dict) -> str:
+        agent_outputs = state.get("agent_outputs", {})
+        risk = state.get("risk_assessment", {})
+        quant = state.get("quant_score", {})
+        return build_report_prompt(
+            stock_code=state.get("stock_code", ""),
+            stock_name=state.get("stock_name", ""),
+            agent_outputs=agent_outputs,
+            risk_assessment=risk,
+            quant_score=quant,
         )
-        self._log_run(state, result)
-        return result
 
-    def _summarize_agent(self, output: dict) -> dict:
-        if not output:
-            return {"status": "not_available"}
-        return {
-            "verdict": output.get("verdict", "N/A"),
-            "key_data": {k: v for k, v in output.items()
-                         if k in ("risk_level", "sentiment", "trend", "pe_ratio", "roe")},
-        }
+    def _calculate_confidence(self, result: dict, state: dict) -> float:
+        if result.get("parse_error"):
+            return 0.1
+        has_recommendation = 1.0 if result.get("recommendation") else 0.0
+        has_findings = 1.0 if result.get("key_findings") else 0.0
+        has_summary = 1.0 if result.get("executive_summary") else 0.0
+        return round(0.4 * has_recommendation + 0.3 * has_findings + 0.3 * has_summary, 2)
 
-
-register_agent(ReportAgent())
+    def _get_expected_output_keys(self) -> list[str]:
+        return ["executive_summary", "recommendation", "key_findings", "overall_score"]

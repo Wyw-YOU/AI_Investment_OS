@@ -1,24 +1,40 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/", label: "总览" },
-  { href: "/stock", label: "个股分析" },
-  { href: "/portfolio", label: "组合管理" },
+  { href: "/", label: "Dashboard", icon: " " },
+  { href: "/stock/600519", label: " ", icon: " " },
+  { href: "/portfolio", label: "Portfolio", icon: " " },
+  { href: "/login", label: " ", icon: " " },
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
-    <aside className="w-56 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col gap-2">
-      <h1 className="text-lg font-bold mb-4">AI Investment OS</h1>
-      {NAV_ITEMS.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className="px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
-          {item.label}
-        </Link>
-      ))}
+    <aside className="w-56 bg-slate-900 border-r border-slate-800 min-h-screen p-4">
+      <div className="mb-8">
+        <h1 className="text-xl font-bold text-blue-400">AI Investment OS</h1>
+        <p className="text-xs text-slate-500 mt-1">Multi-Agent Research System</p>
+      </div>
+      <nav className="space-y-1">
+        {NAV_ITEMS.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+                ? "bg-blue-600/20 text-blue-400"
+                : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            }`}
+          >
+            <span>{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
     </aside>
   );
 }

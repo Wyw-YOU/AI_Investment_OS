@@ -1,0 +1,23 @@
+{
+  "skill_name": "dev-timeline",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How long will it take to implement the News Agent for our AI Investment OS project? We have 2 developers and they're experienced with Python but new to LangGraph.",
+      "expected_output": "Detailed timeline estimate with task breakdown, dependencies, risks, and milestones. Should include 5-9 days total with buffer, covering data integration, core logic, prompt design, RAG integration, testing, and LangGraph integration.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "We're starting Phase 4 (Development) of the AI Investment OS project. We have 3 developers and 4 months. Help us create a sprint plan with clear milestones and priorities.",
+      "expected_output": "Comprehensive sprint plan with 8-10 sprints, clear priorities (foundation → core services → agents → integration), milestones every 2 weeks, and realistic scope for 3 developers over 4 months.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "What are the main risks we should consider when implementing the multi-agent workflow system using LangGraph? How can we mitigate them?",
+      "expected_output": "Risk assessment covering: multi-agent coordination complexity, state management challenges, parallel execution issues, error handling, performance bottlenecks. Each risk should have probability, impact, and specific mitigation strategies.",
+      "files": []
+    }
+  ]
+}

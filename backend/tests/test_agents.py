@@ -1,50 +1,53 @@
-"""Tests for InvestmentState and BaseAgent."""
-import pytest
-from app.agents.state import InvestmentState
-from app.agents.base import AGENT_REGISTRY, get_agent, list_agents
+from app.agents.planner import PlannerAgent
+from app.agents.state import create_initial_state
 
 
-class TestInvestmentState:
-    def test_default_state(self):
-        state = InvestmentState()
-        assert state.current_stock == ""
-        assert state.decision == ""
-        assert state.agent_outputs == {}
+def test_planner_agent():
+    state = create_initial_state(
+        stock_code="600519",
+        stock_name="贵州茅台",
+        news_data=[{"title": "test news"}],
+        financial_data={"metrics": {"roe": 30}},
+        price_history=[{"close": 1800}] * 30,
+    )
+    agent = PlannerAgent()
+    output = agent.run(dict(state))
 
-    def test_set_agent_output(self):
-        state = InvestmentState()
-        result = {
-            "output": {"verdict": "buy"},
-            "confidence": 0.85,
-            "evidence": ["test"],
-            "reasoning": "test reasoning",
-        }
-        state.set_agent_output("finance", result)
-        assert state.get_agent_output("finance") == {"verdict": "buy"}
-        assert state.get_agent_confidence("finance") == 0.85
-
-    def test_get_missing_agent(self):
-        state = InvestmentState()
-        assert state.get_agent_output("nonexistent") == {}
-        assert state.get_agent_confidence("nonexistent") == 0.0
+    assert output.agent_name == "planner"
+    assert output.confidence == 1.0
+    assert "tasks" in output.result
+    assert "parallel_agents" in output.result
+    assert len(output.result["parallel_agents"]) == 4
 
 
-class TestAgentRegistry:
-    def test_agents_registered(self):
-        agents = list_agents()
-        assert "planner" in agents
-        assert "finance" in agents
-        assert "technical" in agents
-        assert "news" in agents
-        assert "risk" in agents
-        assert "judge" in agents
-        assert "portfolio" in agents
-        assert "report" in agents
+def test_base_agent_prompt_building():
+    from app.agents.news import NewsAgent
+    agent = NewsAgent()
+    state = {
+        "stock_code": "600519",
+        "stock_name": "贵州茅台",
+        "news_data": [{"title": "利好消息", "source": "东方财富", "content": "公司业绩增长"}],
+        "market_data": {"price": 1800, "change_pct": 2.5},
+    }
+    prompt = agent.build_prompt(state)
+    assert "600519" in prompt
+    assert "贵州茅台" in prompt
+    assert "[ROLE]" in prompt
+    assert "[TASK]" in prompt
 
-    def test_get_agent(self):
-        agent = get_agent("finance")
-        assert agent.name == "finance"
 
-    def test_get_missing_agent(self):
-        with pytest.raises(KeyError):
-            get_agent("nonexistent")
+def test_agent_output_validation():
+    from app.agents.models import AgentOutput
+    output = AgentOutput(
+        agent_name="test",
+        result={"key": "value"},
+        confidence=1.5,  # Should be clamped to 1.0
+    )
+    assert output.confidence == 1.0
+
+    output2 = AgentOutput(
+        agent_name="test",
+        result={"key": "value"},
+        confidence=-0.5,  # Should be clamped to 0.0
+    )
+    assert output2.confidence == 0.0

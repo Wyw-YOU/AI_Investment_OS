@@ -1,55 +1,53 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import json
+import os
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-import warnings
 
-from app.config import settings
-from app.core.logging import setup_logging
-from app.core.rate_limit import rate_limit_middleware
-from app.api import stocks, portfolio, alerts, auth
-from app.services.websocket_manager import ws_manager
+from app.api.auth import router as auth_router
+from app.api.agent import router as agent_router
+from app.api.stocks import router as stocks_router
+from app.api.workspace import router as workspace_router
+from app.config import get_settings
+from app.core.exceptions import AppException
+from app.database import init_db
 
-if settings.jwt_secret == "change-me-in-production" and not settings.debug:
-    warnings.warn(
-        "JWT_SECRET is using the default value! "
-        "Set a secure secret in your .env file before deploying to production.",
-        stacklevel=1,
-    )
+settings = get_settings()
 
-setup_logging(level=settings.log_level, fmt=settings.log_format)
+app = FastAPI(title="AI Investment OS", version="1.0.0")
 
-app = FastAPI(
-    title="AI Investment OS",
-    description="AI-driven financial analysis and portfolio management system",
-    version="0.1.0",
-)
-
+# CORS
+origins = [o.strip() for o in settings.cors_origins.split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(BaseHTTPMiddleware, dispatch=rate_limit_middleware)
 
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(stocks.router, prefix="/api/stocks", tags=["stocks"])
-app.include_router(portfolio.router, prefix="/api/portfolio", tags=["portfolio"])
-app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
+# Routers
+app.include_router(auth_router)
+app.include_router(stocks_router)
+app.include_router(workspace_router)
+app.include_router(agent_router)
+
+
+@app.on_event("startup")
+async def startup():
+    os.makedirs("data", exist_ok=True)
+    await init_db()
 
 
 @app.get("/health")
-async def health_check():
-    return {"status": "ok", "version": "0.1.0"}
+async def health():
+    return {"status": "ok", "version": "1.0.0"}
 
 
-@app.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    await ws_manager.connect(user_id, websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            await ws_manager.send_to_user(user_id, {"type": "echo", "data": data})
-    except WebSocketDisconnect:
-        ws_manager.disconnect(user_id, websocket)
+@app.exception_handler(AppException)
+async def app_exception_handler(request, exc):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=exc.code,
+        content={"code": exc.code, "message": exc.message, "data": None},
+    )

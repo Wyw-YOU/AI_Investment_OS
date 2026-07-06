@@ -1,94 +1,49 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+async function fetchApi(path: string, options: RequestInit = {}) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : "",
+      ...options.headers,
+    },
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API ${res.status}: ${res.statusText}`);
-  }
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || data.message || "Request failed");
+  return data;
 }
 
-export interface HotStock {
-  stock_code: string;
-  name: string;
-  latest_price: number;
-  change_pct: number;
-  amount: number;
-}
+// Auth
+export const login = (email: string, password: string) =>
+  fetchApi("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 
-export interface PortfolioSummary {
-  id: string;
-  name: string;
-  holdings: Record<string, number>;
-  candidate_pool: string[];
-  risk_score: number;
-  expected_return: number;
-}
+export const register = (email: string, password: string) =>
+  fetchApi("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password }) });
 
-export interface PortfolioDetail extends PortfolioSummary {}
+export const getMe = () => fetchApi("/api/auth/me");
 
-export interface Alert {
-  id: number;
-  stock_code: string;
-  alert_type: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-}
+// Stocks
+export const fetchHotStocks = () => fetchApi("/api/stocks/hot");
+export const fetchStockDetail = (code: string) => fetchApi(`/api/stocks/${code}`);
+export const fetchStockHistory = (code: string) => fetchApi(`/api/stocks/${code}/history`);
+export const fetchStockIndicators = (code: string) => fetchApi(`/api/stocks/${code}/indicators`);
+export const fetchMarketOverview = () => fetchApi("/api/market/overview");
 
-export interface AnalysisResult {
-  status: string;
-  stock: string;
-  decision: string;
-  report: Record<string, unknown>;
-  agent_outputs: Record<string, unknown>;
-  agent_confidence: Record<string, number>;
-}
+// Agent
+export const runAnalysis = (stockCode: string, query?: string) =>
+  fetchApi("/api/agent/run", {
+    method: "POST",
+    body: JSON.stringify({ stock_code: stockCode, query: query || "" }),
+  });
 
-export const fetchHotStocks = () =>
-  apiFetch<{ stocks: HotStock[] }>("/api/stocks/hot");
+export const getAnalysisStatus = (taskId: number) => fetchApi(`/api/agent/status/${taskId}`);
 
-export const analyzeStock = (stockCode: string) =>
-  apiFetch<AnalysisResult>(`/api/stocks/analyze/sync/${stockCode}`);
-
-export const fetchStockDetail = (code: string) =>
-  apiFetch<Record<string, unknown>>(`/api/stocks/${code}`);
-
-export const fetchPortfolios = () =>
-  apiFetch<{ portfolios: PortfolioSummary[] }>("/api/portfolio/");
-
-export const fetchPortfolioDetail = (id: string) =>
-  apiFetch<PortfolioDetail>(`/api/portfolio/${id}`);
-
-export const createPortfolio = (name: string) =>
-  apiFetch<{ id: string; name: string; status: string }>(
-    `/api/portfolio/?name=${encodeURIComponent(name)}`,
-    { method: "POST" }
-  );
-
-export const suggestWeights = (id: string) =>
-  apiFetch<{ weights: Record<string, number>; scores: Record<string, number> }>(
-    `/api/portfolio/${id}/suggest-weights`,
-    { method: "POST" }
-  );
-
-export const calcRisk = (id: string) =>
-  apiFetch<{
-    risk_score: number;
-    risk_level: string;
-    sector_exposure: Record<string, number>;
-    max_single_weight: number;
-    risk_factors: string[];
-  }>(`/api/portfolio/${id}/risk`);
-
-export const fetchAlerts = (userId = "default") =>
-  apiFetch<{ alerts: Alert[] }>(`/api/alerts/?user_id=${userId}`);
-
-export const fetchUnreadAlerts = (userId = "default") =>
-  apiFetch<{ alerts: Alert[]; count: number }>(
-    `/api/alerts/unread?user_id=${userId}`
-  );
+// Workspace
+export const fetchWorkspaces = () => fetchApi("/api/workspace");
+export const createWorkspace = (stockCode: string, name?: string) =>
+  fetchApi("/api/workspace", {
+    method: "POST",
+    body: JSON.stringify({ stock_code: stockCode, name: name || "" }),
+  });
