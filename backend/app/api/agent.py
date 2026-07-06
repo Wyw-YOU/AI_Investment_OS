@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +30,8 @@ async def run_analysis(
 
     # Gather data from services
     realtime = await market_data_service.get_stock_realtime(stock_code)
+    if "error" in realtime:
+        return ApiResponse(code=400, message=f"Failed to fetch stock data: {realtime['error']}")
     stock_name = realtime.get("name", stock_code)
 
     history = await market_data_service.get_stock_history(stock_code, 120)
@@ -56,7 +58,7 @@ async def run_analysis(
         status=result.get("phase", "complete"),
         agent_outputs_json=json.dumps(result.get("agent_outputs", {}), ensure_ascii=False),
         final_report_json=json.dumps(result.get("final_report", {}), ensure_ascii=False),
-        completed_at=datetime.now(),
+        completed_at=datetime.now(timezone.utc),
     )
     db.add(task)
     await db.flush()

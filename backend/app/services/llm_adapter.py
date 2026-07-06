@@ -1,8 +1,8 @@
+import asyncio
 import json
 import logging
-import time
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app.config import get_settings
 
@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 class LLMAdapter:
     def __init__(self):
         settings = get_settings()
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key=settings.llm_api_key,
             base_url=settings.llm_base_url,
         )
         self.model = settings.llm_model
 
-    def chat(
+    async def chat(
         self,
         system_prompt: str,
         user_prompt: str,
@@ -28,7 +28,7 @@ class LLMAdapter:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model=self.model,
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -41,18 +41,18 @@ class LLMAdapter:
             except Exception as e:
                 logger.warning(f"LLM call attempt {attempt + 1} failed: {e}")
                 if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
+                    await asyncio.sleep(2 ** attempt)
                 else:
                     raise
 
-    def chat_json(
+    async def chat_json(
         self,
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.1,
         max_tokens: int = 2000,
     ) -> dict:
-        raw = self.chat(system_prompt, user_prompt, temperature, max_tokens)
+        raw = await self.chat(system_prompt, user_prompt, temperature, max_tokens)
         # Extract JSON from response (handles markdown code blocks)
         text = raw.strip()
         if "```json" in text:

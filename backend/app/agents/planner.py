@@ -6,7 +6,7 @@ class PlannerAgent(BaseAgent):
     name = "planner"
     description = "a task planning agent that organizes the analysis workflow"
 
-    def run(self, state: dict) -> AgentOutput:
+    async def run(self, state: dict) -> AgentOutput:
         stock_code = state.get("stock_code", "")
         has_news = bool(state.get("news_data"))
         has_financial = bool(state.get("financial_data"))

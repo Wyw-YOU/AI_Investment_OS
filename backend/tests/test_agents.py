@@ -1,8 +1,11 @@
 from app.agents.planner import PlannerAgent
 from app.agents.state import create_initial_state
 
+import pytest
 
-def test_planner_agent():
+
+@pytest.mark.asyncio
+async def test_planner_agent():
     state = create_initial_state(
         stock_code="600519",
         stock_name="贵州茅台",
@@ -11,7 +14,7 @@ def test_planner_agent():
         price_history=[{"close": 1800}] * 30,
     )
     agent = PlannerAgent()
-    output = agent.run(dict(state))
+    output = await agent.run(dict(state))
 
     assert output.agent_name == "planner"
     assert output.confidence == 1.0

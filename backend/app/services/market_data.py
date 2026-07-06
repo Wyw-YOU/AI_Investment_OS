@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -15,7 +16,7 @@ class MarketDataService:
         if cached:
             return cached
         try:
-            df = ak.stock_zh_a_spot_em()
+            df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
             row = df[df["代码"] == code]
             if row.empty:
                 return {"error": f"Stock {code} not found"}
@@ -47,7 +48,9 @@ class MarketDataService:
         if cached:
             return cached
         try:
-            df = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq")
+            df = await asyncio.to_thread(
+                ak.stock_zh_a_hist, symbol=code, period="daily", adjust="qfq"
+            )
             df = df.tail(days)
             records = []
             for _, row in df.iterrows():
@@ -71,7 +74,7 @@ class MarketDataService:
         if cached:
             return cached
         try:
-            df = ak.stock_zh_a_spot_em()
+            df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
             df = df.dropna(subset=["涨跌幅"])
             df = df.sort_values("成交额", ascending=False).head(limit)
             result = []
@@ -102,7 +105,8 @@ class MarketDataService:
             result = {}
             for idx_code, idx_name in indices.items():
                 try:
-                    df = ak.stock_zh_index_daily(symbol=f"sh{idx_code}" if idx_code.startswith("0") else f"sz{idx_code}")
+                    symbol = f"sh{idx_code}" if idx_code.startswith("0") else f"sz{idx_code}"
+                    df = await asyncio.to_thread(ak.stock_zh_index_daily, symbol=symbol)
                     if not df.empty:
                         latest = df.iloc[-1]
                         prev = df.iloc[-2] if len(df) > 1 else latest

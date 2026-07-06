@@ -12,7 +12,7 @@ class BaseAgent(ABC):
     description: str = ""
 
     @abstractmethod
-    def run(self, state: dict) -> AgentOutput:
+    async def run(self, state: dict) -> AgentOutput:
         pass
 
     def build_prompt(self, state: dict) -> str:
@@ -102,12 +102,12 @@ class LLMAgent(BaseAgent):
         self.temperature = temperature
         self.max_tokens = max_tokens
 
-    def run(self, state: dict) -> AgentOutput:
+    async def run(self, state: dict) -> AgentOutput:
         try:
             prompt = self.build_prompt(state)
             from app.services.llm_adapter import get_llm
             llm = get_llm()
-            response = llm.chat(
+            response = await llm.chat(
                 system_prompt=self._get_role(),
                 user_prompt=prompt,
                 temperature=self.temperature,

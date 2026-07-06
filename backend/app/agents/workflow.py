@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from langgraph.graph import END, StateGraph
 
@@ -18,9 +18,9 @@ from app.agents.state import WorkflowPhase, WorkflowState, create_initial_state
 logger = logging.getLogger(__name__)
 
 
-def safe_agent_run(agent: BaseAgent, state: dict) -> AgentOutput:
+async def safe_agent_run(agent: BaseAgent, state: dict) -> AgentOutput:
     try:
-        return agent.run(state)
+        return await agent.run(state)
     except Exception as e:
         logger.error(f"Agent {agent.name} failed: {e}")
         return AgentOutput(
@@ -31,53 +31,53 @@ def safe_agent_run(agent: BaseAgent, state: dict) -> AgentOutput:
 
 
 # Node functions
-def planner_node(state: WorkflowState) -> dict:
+async def planner_node(state: WorkflowState) -> dict:
     agent = PlannerAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "phase": WorkflowPhase.ANALYZING.value,
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
         "agent_outputs": {**state.get("agent_outputs", {}), "planner": output.model_dump()},
     }
 
 
-def news_node(state: WorkflowState) -> dict:
+async def news_node(state: WorkflowState) -> dict:
     agent = NewsAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "parallel_results": [output.model_dump()],
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def financial_node(state: WorkflowState) -> dict:
+async def financial_node(state: WorkflowState) -> dict:
     agent = FinancialAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "parallel_results": [output.model_dump()],
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def technical_node(state: WorkflowState) -> dict:
+async def technical_node(state: WorkflowState) -> dict:
     agent = TechnicalAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "parallel_results": [output.model_dump()],
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def macro_node(state: WorkflowState) -> dict:
+async def macro_node(state: WorkflowState) -> dict:
     agent = MacroAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "parallel_results": [output.model_dump()],
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def merge_node(state: WorkflowState) -> dict:
+async def merge_node(state: WorkflowState) -> dict:
     agent_outputs = dict(state.get("agent_outputs", {}))
     for item in state.get("parallel_results", []):
         if isinstance(item, dict) and "agent_name" in item:
@@ -85,40 +85,40 @@ def merge_node(state: WorkflowState) -> dict:
     return {
         "agent_outputs": agent_outputs,
         "phase": WorkflowPhase.RISK_ASSESSING.value,
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def risk_node(state: WorkflowState) -> dict:
+async def risk_node(state: WorkflowState) -> dict:
     agent = RiskAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "risk_assessment": output.model_dump(),
         "agent_outputs": {**state.get("agent_outputs", {}), "risk": output.model_dump()},
         "phase": WorkflowPhase.SCORING.value,
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def quant_node(state: WorkflowState) -> dict:
+async def quant_node(state: WorkflowState) -> dict:
     agent = QuantAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "quant_score": output.model_dump(),
         "agent_outputs": {**state.get("agent_outputs", {}), "quant": output.model_dump()},
         "phase": WorkflowPhase.REPORTING.value,
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
-def report_node(state: WorkflowState) -> dict:
+async def report_node(state: WorkflowState) -> dict:
     agent = ReportAgent()
-    output = safe_agent_run(agent, dict(state))
+    output = await safe_agent_run(agent, dict(state))
     return {
         "final_report": output.model_dump(),
         "agent_outputs": {**state.get("agent_outputs", {}), "report": output.model_dump()},
         "phase": WorkflowPhase.COMPLETE.value,
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 

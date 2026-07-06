@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Any
 
@@ -18,7 +19,7 @@ class FinancialService:
 
             # Key financial indicators
             try:
-                df = ak.stock_financial_abstract_ths(symbol=code)
+                df = await asyncio.to_thread(ak.stock_financial_abstract_ths, symbol=code)
                 if not df.empty:
                     latest = df.iloc[0]
                     result["metrics"] = {
@@ -32,7 +33,7 @@ class FinancialService:
 
             # Valuation
             try:
-                spot = ak.stock_zh_a_spot_em()
+                spot = await asyncio.to_thread(ak.stock_zh_a_spot_em)
                 row = spot[spot["代码"] == code]
                 if not row.empty:
                     r = row.iloc[0]
