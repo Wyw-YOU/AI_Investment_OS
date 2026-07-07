@@ -32,18 +32,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/4] 安装后端依赖...
+echo [1/4] 安装后端依赖 (腾讯云镜像)...
 cd backend
 if not exist ".venv" (
     python -m venv .venv
 )
 call .venv\Scripts\activate.bat
-pip install -r requirements.txt -q
+pip install -r requirements.txt -q -i https://mirrors.tencent.com/pypi/simple/ --trusted-host mirrors.tencent.com
 cd ..
 
-echo [2/4] 安装前端依赖...
+echo [2/4] 安装前端依赖 (腾讯云镜像)...
 cd frontend
 if not exist "node_modules" (
+    call npm config set registry https://mirrors.tencent.com/npm/
     call npm install
 )
 cd ..

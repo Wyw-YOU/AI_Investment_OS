@@ -1,15 +1,17 @@
-FROM node:20-alpine AS deps
+FROM mirror.ccs.tencentyun.com/library/node:20-alpine AS deps
 WORKDIR /app
+# 腾讯云 npm 镜像
+RUN npm config set registry https://mirrors.tencent.com/npm/
 COPY package.json package-lock.json* ./
 RUN npm ci || npm install
 
-FROM node:20-alpine AS builder
+FROM mirror.ccs.tencentyun.com/library/node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM mirror.ccs.tencentyun.com/library/node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
