@@ -1,3 +1,11 @@
+"""
+技术指标计算服务（纯 CPU 计算，无 I/O）。
+
+基于 pandas 计算 MA/RSI/MACD/BOLL/KDJ 等指标，
+返回结果直接注入 LangGraph state 供 TechnicalAgent 使用。
+输入数据不足 20 条时返回 error，由上层处理。
+"""
+
 import numpy as np
 import pandas as pd
 

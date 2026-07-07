@@ -1,3 +1,10 @@
+"""
+Sprint 7 增量迁移：为 agent_tasks 表添加进度追踪和关联字段。
+
+使用 PRAGMA table_info 检查列是否已存在，确保可重复运行（幂等）。
+适用于已有生产数据库的增量升级，新建数据库由 SQLAlchemy create_all 自动处理。
+"""
+
 """SQLite ALTER TABLE migration for Sprint 7 schema changes."""
 import os
 import sqlite3

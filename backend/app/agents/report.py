@@ -1,13 +1,20 @@
+"""
+报告生成 Agent：workflow 最后一步，综合所有分析结果生成最终投资报告。
+输出包含：执行摘要、投资建议、目标价区间、核心发现、综合评分。
+"""
+
 from app.agents.base import LLMAgent
 from app.agents.models import AgentOutput
 from app.agents.prompts import build_report_prompt
 
 
 class ReportAgent(LLMAgent):
+    """最终报告生成 Agent，作为 workflow 的最后节点输出完整投资报告。"""
     name = "report"
     description = "the chief investment strategist producing the final investment report"
 
     def build_prompt(self, state: dict) -> str:
+        """提取所有 agent 分析结果 + 风险评估 + 量化评分，构建报告 prompt。"""
         agent_outputs = state.get("agent_outputs", {})
         risk = state.get("risk_assessment", {})
         quant = state.get("quant_score", {})

@@ -1,3 +1,12 @@
+"""
+Agent 分析 API 路由。
+
+分析流程：
+1. POST /run → 收集数据、创建 DB 任务、启动后台 workflow、立即返回 task_id
+2. 前端通过 WebSocket 或轮询 GET /status 获取实时进度
+3. 后台 workflow 完成后将结果写回 DB，前端获取最终报告
+"""
+
 import asyncio
 import json
 import logging

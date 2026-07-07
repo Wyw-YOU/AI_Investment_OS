@@ -1,3 +1,13 @@
+"""
+Agent 基类体系。
+
+BaseAgent（抽象基类）：定义 agent 的通用接口（run/build_prompt/parse_response）
+  └─ LLMAgent（具体基类）：实现 LLM 调用逻辑，子类只需覆盖 prompt 相关方法
+
+各专业 agent（NewsAgent、FinancialAgent 等）继承 LLMAgent，
+通过覆盖 _get_role/_get_task_description/_get_output_format 定制 prompt。
+"""
+
 import json
 import logging
 from abc import ABC, abstractmethod

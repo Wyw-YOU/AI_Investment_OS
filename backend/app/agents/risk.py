@@ -1,13 +1,21 @@
+"""
+风险评估 Agent：综合所有 agent 的分析结果，输出整体风险评级。
+位于 workflow 的 merge 之后，可访问所有并行 agent 的输出。
+置信度权重：分析来源数量(0.5) + 有风险评分(0.3) + 基础分(0.2)
+"""
+
 from app.agents.base import LLMAgent
 from app.agents.models import AgentOutput
 from app.agents.prompts import build_risk_prompt
 
 
 class RiskAgent(LLMAgent):
+    """风险评估 Agent，综合多维度分析输出风险等级和仓位建议。"""
     name = "risk"
     description = "a senior risk management analyst"
 
     def build_prompt(self, state: dict) -> str:
+        """合并 agent_outputs 和 parallel_results，确保可访问所有分析结果。"""
         agent_outputs = state.get("agent_outputs", {})
         # Include parallel results if available
         parallel = state.get("parallel_results", [])

@@ -1,7 +1,16 @@
+"""
+各专业 Agent 的 Prompt 构建函数。
+
+每个函数将原始数据（行情、财报、新闻等）格式化为 LLM 可理解的 prompt。
+统一遵循 [ROLE]-[CONTEXT]-[TASK]-[OUTPUT FORMAT]-[CONSTRAINTS] 结构，
+这是经过测试的 prompt 工程模板，确保 LLM 返回结构化 JSON。
+"""
+
 import json
 
 
 def build_news_prompt(stock_code: str, stock_name: str, news_data: list, market_data: dict = None) -> str:
+    """构建新闻分析 prompt：输入新闻列表 + 行情，输出情感分析 JSON。"""
     news_text = "\n".join(
         f"- [{n.get('source', '')}] {n.get('title', '')}: {n.get('content', '')[:200]}"
         for n in news_data[:10]
@@ -44,6 +53,7 @@ Analyze the news and provide:
 
 
 def build_financial_prompt(stock_code: str, stock_name: str, financial_data: dict, market_data: dict = None) -> str:
+    """构建基本面分析 prompt：输入财务指标 + 估值数据，输出盈利能力/成长性/估值/健康度 JSON。"""
     metrics = financial_data.get("metrics", {})
     valuation = financial_data.get("valuation", {})
 
@@ -83,6 +93,7 @@ Perform fundamental analysis:
 
 
 def build_technical_prompt(stock_code: str, stock_name: str, price_history: list, indicators: dict) -> str:
+    """构建技术分析 prompt：输入K线 + 技术指标，输出趋势/支撑位/交易信号 JSON。"""
     recent = price_history[-5:] if price_history else []
     return f"""[ROLE]
 You are a professional technical analyst specializing in Chinese A-share market.
@@ -120,6 +131,7 @@ Perform technical analysis:
 
 
 def build_macro_prompt(stock_code: str, stock_name: str, market_data: dict) -> str:
+    """构建宏观分析 prompt：输入市场数据，输出市场情绪/政策环境/流动性 JSON。"""
     return f"""[ROLE]
 You are a macro-economic analyst covering the Chinese market.
 
@@ -153,6 +165,7 @@ Assess macro environment impact on this stock:
 
 
 def build_risk_prompt(stock_code: str, stock_name: str, agent_outputs: dict) -> str:
+    """构建风险评估 prompt：输入所有 agent 分析结果，综合输出风险等级/风险因子/仓位建议 JSON。"""
     return f"""[ROLE]
 You are a senior risk management analyst.
 
@@ -191,6 +204,7 @@ Based on all agent analyses, assess overall risk:
 
 
 def build_quant_prompt(stock_code: str, stock_name: str, agent_outputs: dict) -> str:
+    """构建量化评分 prompt：输入所有分析结果，输出多因子评分（估值/成长/质量/动量/情绪）JSON。"""
     return f"""[ROLE]
 You are a quantitative analyst specializing in multi-factor scoring models.
 
@@ -230,6 +244,7 @@ Create a quantitative score based on multiple factors:
 
 
 def build_report_prompt(stock_code: str, stock_name: str, agent_outputs: dict, risk_assessment: dict, quant_score: dict) -> str:
+    """构建最终报告 prompt：综合所有分析结果，输出投资建议/目标价/核心发现/综合评分 JSON。"""
     return f"""[ROLE]
 You are the chief investment strategist producing the final investment report.
 

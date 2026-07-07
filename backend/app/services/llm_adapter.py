@@ -1,3 +1,11 @@
+"""
+LLM 适配层：统一封装 OpenAI 兼容 API（DeepSeek/MiMo 等）。
+
+使用 AsyncOpenAI 避免阻塞 FastAPI 事件循环。
+chat_json 自动从 LLM 响应中提取 JSON（处理 markdown 代码块包裹的情况）。
+全局单例 llm_adapter 通过 get_llm() 获取，延迟初始化。
+"""
+
 import asyncio
 import json
 import logging

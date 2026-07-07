@@ -1,3 +1,11 @@
+"""
+双层缓存服务：Redis（远程共享）+ 内存 dict（本地 fallback）。
+
+Redis 连接采用延迟初始化（首次 get/set 时才尝试连接），
+避免应用启动时因 Redis 不可用而阻塞。
+Redis 不可用时自动降级为纯内存缓存，不影响核心功能。
+"""
+
 import asyncio
 import json
 import time

@@ -7,6 +7,7 @@ RUN npm ci || npm install
 
 FROM mirror.ccs.tencentyun.com/library/node:20-alpine AS builder
 WORKDIR /app
+ENV BACKEND_URL=http://backend:8000
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

@@ -31,14 +31,20 @@ const STATUS_LABELS: Record<string, { text: string; color: string }> = {
 export default function Dashboard() {
   const [overview, setOverview] = useState<Record<string, MarketIndex>>({});
   const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+
     fetchMarketOverview()
       .then((r: ApiResponse<Record<string, MarketIndex>>) => setOverview(r.data || {}))
       .catch(() => {});
-    fetchAnalysisHistory()
-      .then((r: ApiResponse<RecentTask[]>) => setRecentTasks((r.data || []).slice(0, 5)))
-      .catch(() => {});
+    if (token) {
+      fetchAnalysisHistory()
+        .then((r: ApiResponse<RecentTask[]>) => setRecentTasks((r.data || []).slice(0, 5)))
+        .catch(() => {});
+    }
   }, []);
 
   const indices = [
@@ -57,7 +63,14 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold text-white">Dashboard</h1>
               <p className="text-slate-500 text-sm mt-1">AI 驱动的投资研究操作系统</p>
             </div>
-            <StockInput />
+            <div className="flex items-center gap-3">
+              <StockInput />
+              {!isLoggedIn && (
+                <a href="/login" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm font-medium transition-colors whitespace-nowrap">
+                  登录 / 注册
+                </a>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

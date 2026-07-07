@@ -1,6 +1,18 @@
+/**
+ * API 客户端层。
+ *
+ * 设计要点：
+ * - API_BASE 为空字符串，所有请求走 Next.js rewrite 代理（/api/* → backend:8000），
+ *   这样浏览器端不需要知道后端地址，也避免 CORS 问题。
+ * - WebSocket 无法被 Next.js 代理，需直连后端 8000 端口。
+ * - SSR 和 CSR 统一用相同路径，rewrites 在服务端同样生效。
+ */
+
 import type { AnalysisProgressEvent } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Use empty string so requests go through Next.js rewrite proxy in production.
+// In standalone Docker, Next.js rewrites /api/* to backend container.
+const API_BASE = "";
 
 async function fetchApi(path: string, options: RequestInit = {}) {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
@@ -50,8 +62,10 @@ export function connectAnalysisWS(
 ): WebSocket | null {
   if (typeof window === "undefined") return null;
   try {
-    const wsBase = API_BASE.replace("http://", "ws://").replace("https://", "wss://");
-    const ws = new WebSocket(`${wsBase}/api/agent/ws/analysis/${analysisId}`);
+    const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    // WebSocket connects directly to backend port (Next.js cannot proxy WS)
+    const wsHost = `${window.location.hostname}:8000`;
+    const ws = new WebSocket(`${wsProto}//${wsHost}/api/agent/ws/analysis/${analysisId}`);
     ws.onmessage = (msg) => {
       try {
         onEvent(JSON.parse(msg.data));

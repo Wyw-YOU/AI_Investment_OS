@@ -1,3 +1,10 @@
+"""
+应用配置，通过 pydantic-settings 自动从 .env 文件和环境变量加载。
+
+lru_cache 保证全局只初始化一次 Settings 实例。
+jwt_secret 为空时启动报错——生产环境必须通过 .env 显式设置。
+"""
+
 import os
 from functools import lru_cache
 

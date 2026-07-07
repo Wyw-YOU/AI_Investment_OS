@@ -1,3 +1,9 @@
+"""
+用户 ORM 模型。
+密码以 bcrypt 哈希存储（hashed_password 字段），永不存储明文。
+role 字段预留权限扩展（当前默认 "user"）。
+"""
+
 import datetime
 
 from sqlalchemy import DateTime, String, func

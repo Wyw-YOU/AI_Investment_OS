@@ -1,3 +1,11 @@
+"""
+A 股行情数据服务。
+
+akshare 是同步阻塞库，必须用 asyncio.to_thread 包装后才能在 FastAPI 异步环境中使用，
+否则会阻塞事件循环导致所有并发请求冻结。
+所有数据先查缓存（Redis/内存），未命中再调 akshare 并回写缓存。
+"""
+
 import asyncio
 import logging
 from typing import Any

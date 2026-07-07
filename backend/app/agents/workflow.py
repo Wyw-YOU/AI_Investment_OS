@@ -1,3 +1,13 @@
+"""
+LangGraph 投资分析工作流。
+
+流程拓扑：
+  planner → [news, financial, technical, macro]（并行）→ merge → risk → quant → report
+
+progress_callback 参数用于将每个 agent 的状态变化（started/completed/failed）
+实时推送给前端 WebSocket 客户端，实现进度条动画。
+"""
+
 import asyncio
 import logging
 from datetime import datetime, timezone

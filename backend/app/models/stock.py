@@ -1,3 +1,9 @@
+"""
+股票相关的 SQLAlchemy ORM 模型。
+Stock：股票基础信息表（代码、名称、行业等）
+StockSnapshot：行情快照表（价格、成交量、估值等，用于历史回溯）
+"""
+
 import datetime
 
 from sqlalchemy import DateTime, Float, String, func
@@ -7,6 +13,7 @@ from app.database import Base
 
 
 class Stock(Base):
+    """股票基础信息，stock_code 唯一索引，用于去重。"""
     __tablename__ = "stocks"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -21,6 +28,7 @@ class Stock(Base):
 
 
 class StockSnapshot(Base):
+    """行情快照，每次采集记录一条，用于绘制历史估值曲线等场景。"""
     __tablename__ = "stock_snapshots"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)

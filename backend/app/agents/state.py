@@ -1,3 +1,12 @@
+"""
+LangGraph 工作流状态定义。
+
+WorkflowState 是整个投资分析流程在各 agent 之间传递的状态字典。
+LangGraph 用 Annotated 类型标记来控制并行节点合并策略：
+- Annotated[list, operator.add]：并行节点结果 append 合并（不会互相覆盖）
+- Annotated[dict, _merge_dicts]：并行节点结果 merge 合并（后者覆盖前者的同名键）
+"""
+
 import operator
 import uuid
 from datetime import datetime, timezone

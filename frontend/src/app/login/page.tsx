@@ -34,9 +34,25 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-950">
       <div className="w-full max-w-md p-8 bg-slate-900 rounded-2xl border border-slate-800">
         <h1 className="text-2xl font-bold text-white text-center mb-1">AI Investment OS</h1>
-        <p className="text-slate-500 text-center text-sm mb-6">
-          {isRegister ? "创建新账户" : "登录您的账户"}
+        <p className="text-slate-500 text-center text-sm mb-4">
+          Multi-Agent 投资研究操作系统
         </p>
+
+        {/* Login / Register Tab Buttons */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setIsRegister(false)}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${!isRegister ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-slate-200"}`}
+          >
+            登录
+          </button>
+          <button
+            onClick={() => setIsRegister(true)}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${isRegister ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-slate-200"}`}
+          >
+            注册
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

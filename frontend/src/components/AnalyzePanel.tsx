@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * AI 分析面板：发起分析、展示实时进度、呈现最终报告。
+ *
+ * 双通道进度获取：
+ * 1. WebSocket（主通道）：后端 agent 每次状态变化实时推送
+ * 2. 轮询（降级通道）：每 3 秒 GET /status，防止 WebSocket 断连后进度停滞
+ *
+ * WebSocket 断连或 report agent 完成后，轮询自动停止。
+ */
+
 import { useEffect, useRef, useState } from "react";
 import { startAnalysis, getAnalysisStatus, connectAnalysisWS } from "@/lib/api";
 import type { AnalysisResult, AnalysisProgressEvent } from "@/lib/types";
@@ -42,10 +52,12 @@ export default function AnalyzePanel({ stockCode }: Props) {
   const [agentProgress, setAgentProgress] = useState<Record<string, string>>({});
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("token"));
     return () => {
       wsRef.current?.close();
       if (pollRef.current) clearInterval(pollRef.current);
@@ -53,6 +65,13 @@ export default function AnalyzePanel({ stockCode }: Props) {
   }, []);
 
   const handleAnalyze = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("请先登录后再使用 AI 分析功能");
+      setStatus("error");
+      setIsLoggedIn(false);
+      return;
+    }
     setStatus("running");
     setResult(null);
     setError("");
@@ -136,7 +155,12 @@ export default function AnalyzePanel({ stockCode }: Props) {
       ) : null}
 
       {error && status === "error" && (
-        <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">{error}</div>
+        <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
+          {error}
+          {!isLoggedIn && (
+            <a href="/login" className="ml-2 underline text-blue-400 hover:text-blue-300">去登录</a>
+          )}
+        </div>
       )}
 
       {/* Running: per-agent progress */}

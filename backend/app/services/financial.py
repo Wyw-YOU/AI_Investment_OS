@@ -1,3 +1,10 @@
+"""
+财务数据服务：获取个股财务摘要和估值数据。
+
+akshare 调用同 market_data.py 一样需要 asyncio.to_thread 包装。
+两个独立数据源（财务摘要 + 实时行情估值）分别 try-except，单个失败不影响另一个。
+"""
+
 import asyncio
 import logging
 from typing import Any

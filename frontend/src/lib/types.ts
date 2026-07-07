@@ -1,3 +1,8 @@
+/**
+ * 前端类型定义，与后端 ApiResponse.data 的结构一一对应。
+ * AnalysisProgressEvent 对应 TaskManager 推送的 WebSocket 事件格式。
+ */
+
 export interface StockRealtime {
   code: string;
   name: string;
