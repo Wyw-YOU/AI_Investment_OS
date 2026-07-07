@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { runAnalysis } from "@/lib/api";
-import type { AnalysisResult } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import { startAnalysis, getAnalysisStatus, connectAnalysisWS } from "@/lib/api";
+import type { AnalysisResult, AnalysisProgressEvent } from "@/lib/types";
 
 interface Props {
   stockCode: string;
 }
+
+const AGENTS = ["planner", "news", "financial", "technical", "macro", "risk", "quant", "report"] as const;
+const AGENT_LABELS: Record<string, string> = {
+  planner: "任务规划",
+  news: "新闻分析",
+  financial: "基本面",
+  technical: "技术分析",
+  macro: "宏观分析",
+  risk: "风险评估",
+  quant: "量化评分",
+  report: "生成报告",
+};
 
 const RECOMMENDATION_COLORS: Record<string, string> = {
   strong_buy: "text-green-300 bg-green-900/50",
@@ -16,51 +28,148 @@ const RECOMMENDATION_COLORS: Record<string, string> = {
   strong_sell: "text-red-300 bg-red-900/50",
 };
 
+type AnalysisStatus = "idle" | "running" | "done" | "error";
+
+function AgentStatusIcon({ status }: { status: string }) {
+  if (status === "completed") return <span className="text-green-400">  </span>;
+  if (status === "started") return <span className="text-blue-400 animate-pulse">  </span>;
+  if (status === "failed") return <span className="text-red-400">  </span>;
+  return <span className="text-slate-600"> </span>;
+}
+
 export default function AnalyzePanel({ stockCode }: Props) {
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<AnalysisStatus>("idle");
+  const [agentProgress, setAgentProgress] = useState<Record<string, string>>({});
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
+  const wsRef = useRef<WebSocket | null>(null);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      wsRef.current?.close();
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const handleAnalyze = async () => {
-    setLoading(true);
+    setStatus("running");
+    setResult(null);
     setError("");
+    setAgentProgress(Object.fromEntries(AGENTS.map((a) => [a, "pending"])));
+
     try {
-      const resp = await runAnalysis(stockCode);
-      setResult(resp.data as AnalysisResult);
+      const resp = await startAnalysis(stockCode);
+      const data = resp.data;
+      const taskId: number = data.task_id;
+      const analysisId: string = data.analysis_id;
+
+      // Connect WebSocket for real-time progress
+      wsRef.current = connectAnalysisWS(analysisId, (event: AnalysisProgressEvent) => {
+        setAgentProgress((prev) => ({ ...prev, [event.agent_name]: event.status }));
+        if (event.agent_name === "report" && event.status === "completed") {
+          fetchResult(taskId);
+        }
+        if (event.agent_name === "report" && event.status === "failed") {
+          setError("报告生成失败");
+          setStatus("error");
+        }
+      });
+
+      // Fallback polling every 3s
+      pollRef.current = setInterval(async () => {
+        try {
+          const r = await getAnalysisStatus(taskId);
+          const d = r.data;
+          if (d.progress) {
+            setAgentProgress((prev) => ({ ...prev, ...d.progress }));
+          }
+          if (d.status === "complete" || d.status === "failed") {
+            cleanup();
+            if (d.status === "complete") {
+              setResult(d as AnalysisResult);
+              setStatus("done");
+            } else {
+              setError(d.error_message || "分析失败");
+              setStatus("error");
+            }
+          }
+        } catch {}
+      }, 3000);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Analysis failed");
-    } finally {
-      setLoading(false);
+      setError(e instanceof Error ? e.message : "启动分析失败");
+      setStatus("error");
+    }
+  };
+
+  const fetchResult = async (taskId: number) => {
+    cleanup();
+    try {
+      const r = await getAnalysisStatus(taskId);
+      setResult(r.data as AnalysisResult);
+      setStatus("done");
+    } catch {
+      setError("获取结果失败");
+      setStatus("error");
+    }
+  };
+
+  const cleanup = () => {
+    wsRef.current?.close();
+    wsRef.current = null;
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
     }
   };
 
   return (
     <div className="space-y-4">
-      <button
-        onClick={handleAnalyze}
-        disabled={loading}
-        className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 rounded-lg text-white font-medium transition-colors"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            AI 分析中...
-          </span>
-        ) : (
-          "开始 AI 分析"
-        )}
-      </button>
+      {/* Action button */}
+      {status === "idle" || status === "done" || status === "error" ? (
+        <button
+          onClick={handleAnalyze}
+          className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-colors"
+        >
+          {status === "done" ? "  重新分析" : "  开始 AI 分析"}
+        </button>
+      ) : null}
 
-      {error && (
+      {error && status === "error" && (
         <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">{error}</div>
       )}
 
-      {result && (
+      {/* Running: per-agent progress */}
+      {status === "running" && (
+        <div className="bg-slate-800/50 rounded-xl p-4">
+          <h3 className="text-sm font-medium text-blue-400 mb-3">  Agent 分析进度</h3>
+          <div className="space-y-2">
+            {AGENTS.map((name) => (
+              <div key={name} className="flex items-center gap-3 text-sm">
+                <AgentStatusIcon status={agentProgress[name] || "pending"} />
+                <span className="w-20 text-slate-400">{AGENT_LABELS[name]}</span>
+                <div className="flex-1 bg-slate-700 rounded-full h-1.5">
+                  <div
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      agentProgress[name] === "completed"
+                        ? "bg-green-500 w-full"
+                        : agentProgress[name] === "started"
+                          ? "bg-blue-500 w-2/3 animate-pulse"
+                          : agentProgress[name] === "failed"
+                            ? "bg-red-500 w-full"
+                            : "bg-slate-600 w-0"
+                    }`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Results */}
+      {result && status === "done" && (
         <div className="space-y-3">
-          {/* Final Report */}
           {result.final_report?.executive_summary && (
             <div className="bg-slate-800/50 rounded-xl p-4">
               <h3 className="text-sm font-medium text-blue-400 mb-2">  投资报告</h3>
@@ -76,7 +185,6 @@ export default function AnalyzePanel({ stockCode }: Props) {
             </div>
           )}
 
-          {/* Key Findings */}
           {result.final_report?.key_findings && result.final_report.key_findings.length > 0 && (
             <div className="bg-slate-800/50 rounded-xl p-4">
               <h3 className="text-sm font-medium text-yellow-400 mb-2">  核心发现</h3>
@@ -90,7 +198,6 @@ export default function AnalyzePanel({ stockCode }: Props) {
             </div>
           )}
 
-          {/* Risk */}
           {result.risk_assessment && (
             <div className="bg-slate-800/50 rounded-xl p-4">
               <h3 className="text-sm font-medium text-red-400 mb-2">  风险评估</h3>
@@ -101,20 +208,19 @@ export default function AnalyzePanel({ stockCode }: Props) {
             </div>
           )}
 
-          {/* Agent Confidence */}
           <div className="bg-slate-800/50 rounded-xl p-4">
             <h3 className="text-sm font-medium text-purple-400 mb-2">  Agent 置信度</h3>
             <div className="space-y-1.5">
-              {Object.entries(result.agent_outputs).map(([name, info]) => (
+              {Object.entries(result.agent_outputs || {}).map(([name, info]) => (
                 <div key={name} className="flex items-center gap-2 text-sm">
-                  <span className="w-20 text-slate-400">{name}</span>
+                  <span className="w-20 text-slate-400">{AGENT_LABELS[name] || name}</span>
                   <div className="flex-1 bg-slate-700 rounded-full h-2">
                     <div
                       className="bg-blue-500 h-2 rounded-full"
-                      style={{ width: `${(info.confidence || 0) * 100}%` }}
+                      style={{ width: `${((info as { confidence?: number })?.confidence || 0) * 100}%` }}
                     />
                   </div>
-                  <span className="text-slate-300 w-10 text-right">{((info.confidence || 0) * 100).toFixed(0)}%</span>
+                  <span className="text-slate-300 w-10 text-right">{(((info as { confidence?: number })?.confidence || 0) * 100).toFixed(0)}%</span>
                 </div>
               ))}
             </div>

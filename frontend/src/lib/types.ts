@@ -66,3 +66,40 @@ export interface ApiResponse<T = unknown> {
   message: string;
   data: T;
 }
+
+export interface AnalysisProgressEvent {
+  agent_name: string;
+  status: "started" | "completed" | "failed";
+  detail?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface AnalysisStartResponse {
+  task_id: number;
+  analysis_id: string;
+  stock_code: string;
+  stock_name: string;
+  status: string;
+}
+
+export interface AnalysisRecord {
+  id: number;
+  task_id: number;
+  stock_code: string;
+  summary: string;
+  recommendation: string;
+  score: number;
+  created_at: string;
+}
+
+export interface TimelineEvent {
+  type: "note" | "analysis";
+  id: number;
+  content?: string;
+  tags?: string;
+  task_id?: number;
+  summary?: string;
+  recommendation?: string;
+  score?: number;
+  created_at: string;
+}

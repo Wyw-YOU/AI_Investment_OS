@@ -1,6 +1,6 @@
 import operator
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Annotated, Any, TypedDict
 
@@ -13,6 +13,10 @@ class WorkflowPhase(str, Enum):
     REPORTING = "reporting"
     COMPLETE = "complete"
     FAILED = "failed"
+
+
+def _merge_dicts(a: dict, b: dict) -> dict:
+    return {**a, **b}
 
 
 class WorkflowState(TypedDict, total=False):
@@ -47,6 +51,9 @@ class WorkflowState(TypedDict, total=False):
     # Error tracking
     errors: Annotated[list[dict], operator.add]
 
+    # Progress tracking
+    agent_progress: Annotated[dict[str, str], _merge_dicts]
+
 
 def create_initial_state(
     stock_code: str,
@@ -66,8 +73,8 @@ def create_initial_state(
         user_id=user_id,
         query=query,
         phase=WorkflowPhase.INIT.value,
-        started_at=datetime.now().isoformat(),
-        updated_at=datetime.now().isoformat(),
+        started_at=datetime.now(timezone.utc).isoformat(),
+        updated_at=datetime.now(timezone.utc).isoformat(),
         market_data=market_data or {},
         news_data=news_data or [],
         financial_data=financial_data or {},
@@ -79,4 +86,14 @@ def create_initial_state(
         quant_score={},
         final_report={},
         errors=[],
+        agent_progress={
+            "planner": "pending",
+            "news": "pending",
+            "financial": "pending",
+            "technical": "pending",
+            "macro": "pending",
+            "risk": "pending",
+            "quant": "pending",
+            "report": "pending",
+        },
     )

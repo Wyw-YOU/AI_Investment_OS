@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: " " },
-  { href: "/stock/600519", label: " ", icon: " " },
+  { href: "/workspace", label: "研究空间", icon: " " },
+  { href: "/stock/600519", label: "个股分析", icon: " " },
   { href: "/portfolio", label: "Portfolio", icon: " " },
   { href: "/login", label: " ", icon: " " },
 ];

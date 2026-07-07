@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import Callable
 
 from langgraph.graph import END, StateGraph
 
@@ -18,62 +20,102 @@ from app.agents.state import WorkflowPhase, WorkflowState, create_initial_state
 logger = logging.getLogger(__name__)
 
 
-async def safe_agent_run(agent: BaseAgent, state: dict) -> AgentOutput:
-    try:
-        return await agent.run(state)
-    except Exception as e:
-        logger.error(f"Agent {agent.name} failed: {e}")
-        return AgentOutput(
-            agent_name=agent.name,
-            result={"error": str(e)},
-            confidence=0.0,
-        )
+async def safe_agent_run(agent: BaseAgent, state: dict, max_retries: int = 2) -> AgentOutput:
+    for attempt in range(max_retries):
+        try:
+            return await agent.run(state)
+        except Exception as e:
+            logger.error(f"Agent {agent.name} attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2 ** attempt)
+            else:
+                return AgentOutput(
+                    agent_name=agent.name,
+                    result={"error": str(e)},
+                    confidence=0.0,
+                )
 
 
-# Node functions
+def make_progress_updater(agent_name: str) -> Callable:
+    def update(state: WorkflowState) -> dict:
+        progress = dict(state.get("agent_progress", {}))
+        progress[agent_name] = "completed"
+        return progress
+    return update
+
+
+def _make_node_wrapper(agent_name: str, node_fn: Callable, progress_callback: Callable | None):
+    async def wrapped(state: WorkflowState) -> dict:
+        if progress_callback:
+            await progress_callback(agent_name, "started")
+        result = await node_fn(state)
+        # Check if agent result contains error
+        agent_output = result.get("agent_outputs", {}).get(agent_name, {})
+        has_error = "error" in agent_output.get("result", {})
+        if progress_callback:
+            status = "failed" if has_error else "completed"
+            detail = {"error": agent_output["result"]["error"]} if has_error else None
+            await progress_callback(agent_name, status, detail)
+        return result
+    return wrapped
 async def planner_node(state: WorkflowState) -> dict:
     agent = PlannerAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["planner"] = "completed"
     return {
         "phase": WorkflowPhase.ANALYZING.value,
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "agent_outputs": {**state.get("agent_outputs", {}), "planner": output.model_dump()},
+        "agent_progress": progress,
     }
 
 
 async def news_node(state: WorkflowState) -> dict:
     agent = NewsAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["news"] = "completed"
     return {
         "parallel_results": [output.model_dump()],
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "agent_progress": progress,
     }
 
 
 async def financial_node(state: WorkflowState) -> dict:
     agent = FinancialAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["financial"] = "completed"
     return {
         "parallel_results": [output.model_dump()],
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "agent_progress": progress,
     }
 
 
 async def technical_node(state: WorkflowState) -> dict:
     agent = TechnicalAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["technical"] = "completed"
     return {
         "parallel_results": [output.model_dump()],
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "agent_progress": progress,
     }
 
 
 async def macro_node(state: WorkflowState) -> dict:
     agent = MacroAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["macro"] = "completed"
     return {
         "parallel_results": [output.model_dump()],
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "agent_progress": progress,
     }
 
 
@@ -92,66 +134,75 @@ async def merge_node(state: WorkflowState) -> dict:
 async def risk_node(state: WorkflowState) -> dict:
     agent = RiskAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["risk"] = "completed"
     return {
         "risk_assessment": output.model_dump(),
         "agent_outputs": {**state.get("agent_outputs", {}), "risk": output.model_dump()},
         "phase": WorkflowPhase.SCORING.value,
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "agent_progress": progress,
     }
 
 
 async def quant_node(state: WorkflowState) -> dict:
     agent = QuantAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["quant"] = "completed"
     return {
         "quant_score": output.model_dump(),
         "agent_outputs": {**state.get("agent_outputs", {}), "quant": output.model_dump()},
         "phase": WorkflowPhase.REPORTING.value,
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "agent_progress": progress,
     }
 
 
 async def report_node(state: WorkflowState) -> dict:
     agent = ReportAgent()
     output = await safe_agent_run(agent, dict(state))
+    progress = dict(state.get("agent_progress", {}))
+    progress["report"] = "completed"
     return {
         "final_report": output.model_dump(),
         "agent_outputs": {**state.get("agent_outputs", {}), "report": output.model_dump()},
         "phase": WorkflowPhase.COMPLETE.value,
         "updated_at": datetime.now(timezone.utc).isoformat(),
+        "agent_progress": progress,
     }
 
 
-def build_workflow() -> StateGraph:
+def build_workflow(progress_callback: Callable | None = None) -> StateGraph:
     workflow = StateGraph(WorkflowState)
 
-    # Add nodes
-    workflow.add_node("planner", planner_node)
-    workflow.add_node("news", news_node)
-    workflow.add_node("financial", financial_node)
-    workflow.add_node("technical", technical_node)
-    workflow.add_node("macro", macro_node)
-    workflow.add_node("merge", merge_node)
-    workflow.add_node("risk", risk_node)
-    workflow.add_node("quant", quant_node)
-    workflow.add_node("report", report_node)
+    nodes = {
+        "planner": planner_node,
+        "news": news_node,
+        "financial": financial_node,
+        "technical": technical_node,
+        "macro": macro_node,
+        "merge": merge_node,
+        "risk": risk_node,
+        "quant": quant_node,
+        "report": report_node,
+    }
 
-    # Entry
+    for name, fn in nodes.items():
+        workflow.add_node(name, _make_node_wrapper(name, fn, progress_callback))
+
     workflow.set_entry_point("planner")
 
-    # Fan-out: planner -> 4 parallel agents
     workflow.add_edge("planner", "news")
     workflow.add_edge("planner", "financial")
     workflow.add_edge("planner", "technical")
     workflow.add_edge("planner", "macro")
 
-    # Fan-in: parallel agents -> merge
     workflow.add_edge("news", "merge")
     workflow.add_edge("financial", "merge")
     workflow.add_edge("technical", "merge")
     workflow.add_edge("macro", "merge")
 
-    # Sequential: merge -> risk -> quant -> report -> END
     workflow.add_edge("merge", "risk")
     workflow.add_edge("risk", "quant")
     workflow.add_edge("quant", "report")
@@ -170,6 +221,7 @@ async def run_investment_analysis(
     financial_data: dict | None = None,
     price_history: list | None = None,
     indicators: dict | None = None,
+    progress_callback: Callable | None = None,
 ) -> dict:
     state = create_initial_state(
         stock_code=stock_code,
@@ -183,7 +235,7 @@ async def run_investment_analysis(
         indicators=indicators,
     )
 
-    workflow = build_workflow()
+    workflow = build_workflow(progress_callback)
     app = workflow.compile()
 
     try:
@@ -193,6 +245,7 @@ async def run_investment_analysis(
             "stock_code": stock_code,
             "phase": result.get("phase"),
             "agent_outputs": result.get("agent_outputs", {}),
+            "agent_progress": result.get("agent_progress", {}),
             "risk_assessment": result.get("risk_assessment", {}),
             "quant_score": result.get("quant_score", {}),
             "final_report": result.get("final_report", {}),

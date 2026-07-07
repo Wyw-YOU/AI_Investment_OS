@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import StockInput from "@/components/StockInput";
 import KlineChart from "@/components/KlineChart";
@@ -8,8 +8,8 @@ import AnalyzePanel from "@/components/AnalyzePanel";
 import { fetchStockDetail, fetchStockHistory, fetchStockIndicators } from "@/lib/api";
 import type { ApiResponse, StockHistory, StockRealtime } from "@/lib/types";
 
-export default function StockPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = use(params);
+export default function StockPage({ params }: { params: { code: string } }) {
+  const { code } = params;
   const [stock, setStock] = useState<StockRealtime | null>(null);
   const [history, setHistory] = useState<StockHistory[]>([]);
   const [indicators, setIndicators] = useState<Record<string, unknown> | null>(null);
